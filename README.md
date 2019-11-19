@@ -1,6 +1,6 @@
 # DBSQL-Tools
 
-A set of tools for manage relational SQL databases.
+A set of tools to manage relational SQL databases.
 
 ## Tools available
 
