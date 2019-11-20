@@ -7,17 +7,17 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
 public class TestDBSQL extends TestCase {
-	
-	public TestDBSQL(String testName) {
-		super(testName);
-	}
-	
-	public static Test suite() {
-		return new TestSuite(TestDBSQL.class);
-	}
-	
-	public void testApp() {
-		CommandSQL.printHelp();
-	}
-	
+  
+  public TestDBSQL(String testName) {
+    super(testName);
+  }
+  
+  public static Test suite() {
+    return new TestSuite(TestDBSQL.class);
+  }
+  
+  public void testApp() {
+    CommandSQL.printHelp();
+  }
+  
 }
