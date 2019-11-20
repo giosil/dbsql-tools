@@ -8,11 +8,7 @@
   <packaging>jar</packaging>
 
   <name>dbsql-tools</name>
-  <url>http://maven.apache.org</url>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
+  <url>https://github.com/giosil/dbsql-tools</url>
 
   <dependencies>
     <dependency>
