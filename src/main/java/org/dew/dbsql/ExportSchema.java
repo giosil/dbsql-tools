@@ -17,21 +17,49 @@ class ExportSchema
   protected String sORA_CATALOG;
   protected String sORA_SCHEMA;
   
+  protected final static int ORACLE   = 0;
+  protected final static int MYSQL    = 1;
+  protected final static int POSTGRES = 2;
+  protected final static int HSQLDB   = 3;
+  
+  protected String sDestination;
+  protected int iDestination = ORACLE;
+  
   protected String sFILE;
   protected String sFILE_FK;
   protected String sFILE_IDX;
   
   public
-  ExportSchema(Connection conn, String sSchema)
+  ExportSchema(Connection conn, String sSchema, String sDestination)
     throws Exception
   {
     this.conn = conn;
     
     this.sORA_CATALOG = sSchema;
     this.sORA_SCHEMA  = sSchema;
+    
+    this.sDestination = sDestination;
+    if(this.sDestination == null || this.sDestination.length() == 0) {
+      this.sDestination = "oracle";
+    }
+    else {
+      this.sDestination = this.sDestination.trim().toLowerCase();
+    }
+    
+    iDestination = ORACLE;
+    if(this.sDestination.startsWith("m")) {
+      iDestination = MYSQL;
+    }
+    else if(this.sDestination.startsWith("p")) {
+      iDestination = POSTGRES;
+    }
+    else if(this.sDestination.startsWith("h")) {
+      iDestination = HSQLDB;
+    }
+    
     this.sFILE        = System.getProperty("user.home") + File.separator + sORA_CATALOG + ".sql";
     this.sFILE_FK     = System.getProperty("user.home") + File.separator + sORA_CATALOG + "_FK.sql";
-    this.sFILE_IDX    = System.getProperty("user.home") + File.separator + sORA_CATALOG + "_IDX.sql";    
+    this.sFILE_IDX    = System.getProperty("user.home") + File.separator + sORA_CATALOG + "_IDX.sql";
     
     this.out     = getPrintStream(sFILE);
     this.out_fk  = getPrintStream(sFILE_FK);
@@ -41,8 +69,8 @@ class ExportSchema
   public static
   void main(String[] args)
   {
-    if(args == null || args.length != 1) {
-      System.err.println("Usage: ExportSchema data_source");
+    if(args == null || args.length < 1) {
+      System.err.println("Usage: ExportSchema data_source [destination]");
       System.exit(1);
     }
     Connection conn = null;
@@ -54,7 +82,9 @@ class ExportSchema
         System.exit(1);
       }
       
-      ExportSchema tool = new ExportSchema(conn, JdbcDataSource.getUser(args[0]));
+      String sDestination = args.length > 1 ? args[1] : "oracle";
+      
+      ExportSchema tool = new ExportSchema(conn, JdbcDataSource.getUser(args[0]), sDestination);
       tool.writeScripts();
       
       System.out.println("Scripts generated in " + System.getProperty("user.home") + ".");
@@ -173,41 +203,172 @@ class ExportSchema
         
         sFieldName = rpad(sFieldName, ' ', 18);
         
-        if(iFieldType == java.sql.Types.VARCHAR) {
-          sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.CHAR) {
-          sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.DATE) {
-          sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.TIME) {
-          sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.TIMESTAMP) {
-          sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.BLOB) {
-          sb.append("\t" + sFieldName + " BLOB" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.CLOB) {
-          sb.append("\t" + sFieldName + " CBLOB" + sNullable + ",\n");
-        }
-        else {
-          if(iSize <= 20) {
-            sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+        switch (iDestination) {
+        case MYSQL:
+          if(iFieldType == java.sql.Types.VARCHAR) {
+            if(iSize > 255) {
+              sb.append("\t" + sFieldName + " TEXT " + sNullable + ",\n");
+            }
+            else {
+              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+            }
+          }
+          else if(iFieldType == java.sql.Types.CHAR) {
+            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.DATE) {
+            sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.TIME) {
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.TIMESTAMP) {
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.BLOB) {
+            sb.append("\t" + sFieldName + " TEXT" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.CLOB) {
+            sb.append("\t" + sFieldName + " TEXT" + sNullable + ",\n");
+          }
+          else if(iSize <= 20) {
+            if(iDigits > 0) {
+              sb.append("\t" + sFieldName + " DECIMAL(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+            }
+            else {
+              sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
+            }
+          }
+          else {
+            sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
+          }
+          
+          break;
+          
+        case POSTGRES:
+          if(iFieldType == java.sql.Types.VARCHAR) {
+            if(iSize > 255) {
+              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+            }
+            else {
+              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+            }
+          }
+          else if(iFieldType == java.sql.Types.CHAR) {
+            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.DATE) {
+            sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.TIME) {
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.TIMESTAMP) {
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.BLOB) {
+            sb.append("\t" + sFieldName + " BYTEA" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.CLOB) {
+            sb.append("\t" + sFieldName + " TEXT" + sNullable + ",\n");
+          }
+          else if(iSize <= 20) {
+            if(iDigits > 0) {
+              sb.append("\t" + sFieldName + " NUMERIC(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+            }
+            else {
+              sb.append("\t" + sFieldName + " INTEGER" + sNullable + ",\n");
+            }
+          }
+          else {
+            sb.append("\t" + sFieldName + " INTEGER" + sNullable + ",\n");
+          }
+          
+          break;
+          
+        case HSQLDB:
+          if(iFieldType == java.sql.Types.VARCHAR) {
+            if(iSize > 255) {
+              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+            }
+            else {
+              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+            }
+          }
+          else if(iFieldType == java.sql.Types.CHAR) {
+            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.DATE) {
+            sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.TIME) {
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.TIMESTAMP) {
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.BLOB) {
+            sb.append("\t" + sFieldName + " BLOB" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.CLOB) {
+            sb.append("\t" + sFieldName + " VARCHAR(16777216)" + sNullable + ",\n");
+          }
+          else if(iSize <= 20) {
+            if(iDigits > 0) {
+              sb.append("\t" + sFieldName + " DOUBLE" + sNullable + ",\n");
+            }
+            else {
+              sb.append("\t" + sFieldName + " BIGINT" + sNullable + ",\n");
+            }
+          }
+          else {
+            sb.append("\t" + sFieldName + " BIGINT" + sNullable + ",\n");
+          }
+          
+          break;
+        
+        default:
+          if(iFieldType == java.sql.Types.VARCHAR) {
+            if(iSize > 255) {
+              sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sNullable + ",\n");
+            }
+            else {
+              sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sNullable + ",\n");
+            }
+          }
+          else if(iFieldType == java.sql.Types.CHAR) {
+            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.DATE) {
+            sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.TIME) {
+            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.TIMESTAMP) {
+            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.BLOB) {
+            sb.append("\t" + sFieldName + " BLOB" + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.CLOB) {
+            sb.append("\t" + sFieldName + " CBLOB" + sNullable + ",\n");
+          }
+          else if(iSize <= 20) {
+            if(iDigits > 0) {
+              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+            }
+            else {
+              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+            }
           }
           else {
             sb.append("\t" + sFieldName + " NUMBER" + sNullable + ",\n");
           }
+          
+          break;
         }
+        
       }
       String sField = sb.substring(0, sb.length() - 2);
       if(sPrimaryKeys.length() > 0) {
@@ -264,11 +425,21 @@ class ExportSchema
       String sForeignFields = ssFields[2];
       
       String sAlter = "ALTER TABLE " + sTable + " ";
-      sAlter += "ADD CONSTRAINT FOREIGN KEY";
+      if(iDestination == HSQLDB) {
+        sAlter += "ADD FOREIGN KEY";
+      }
+      else {
+        sAlter += "ADD CONSTRAINT FOREIGN KEY";
+      }
       sAlter += " (" + sTableFields + ") REFERENCES ";
       sAlter += sForeignTable + " (" + sForeignFields + ");";
       
       out_fk.println(sAlter);
+    }
+    
+    if(iDestination == HSQLDB) {
+      out_fk.println("\n");
+      out_fk.println("SHUTDOWN COMPACT;\n");
     }
   }
   
@@ -314,6 +485,11 @@ class ExportSchema
       String sCreate = "CREATE INDEX " + sIndexName + " ON " + sTable + "(" + sFields + ");";
       out_idx.println(sCreate);
     }
+    
+    if(iDestination == HSQLDB) {
+      out_idx.println("\n");
+      out_idx.println("SHUTDOWN COMPACT;\n");
+    }
   }
   
   public
@@ -321,6 +497,10 @@ class ExportSchema
     throws Exception
   {
     out.println("\n");
+    
+    if(iDestination == HSQLDB) {
+      out.println("SHUTDOWN COMPACT;\n");
+    }
   }
   
   protected static
