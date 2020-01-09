@@ -22,7 +22,6 @@ public
 class CommandSQL
 {
   protected Connection conn;
-  protected String schema;
   protected PrintStream ps;
   protected List<String> listCommands = new ArrayList<String>();
   
@@ -31,7 +30,6 @@ class CommandSQL
     throws Exception
   {
     this.conn   = conn;
-    this.schema = sSchema;
     this.ps     = new PrintStream(new File(sSchema + "_cmd.log"));
   }
   
@@ -687,34 +685,21 @@ class CommandSQL
       String[] types = new String[1];
       types[0] = "TABLE";
       DatabaseMetaData dbmd = conn.getMetaData();
-      ResultSet rs = dbmd.getTables(schema, schema, null, types);
+      ResultSet rs = dbmd.getTables(null, null, null, types);
       while(rs.next()){
+        String schema    = rs.getString(2);
         String tableName = rs.getString(3);
-        if(tableName.equals("PLAN_TABLE")) continue;
+        
+        if(schema != null && schema.startsWith("APEX_")) continue;
+        if(schema != null && schema.startsWith("SYS"))   continue;
+        if(schema != null && schema.endsWith("SYS"))     continue;
+        if(tableName.indexOf('$') >= 0 || tableName.equals("PLAN_TABLE")) continue;
+        
         System.out.println(tableName);
         ps.println(tableName);
         iCount++;
       }
       rs.close();
-      
-      if(iCount == 0) {
-        ResultSet rsS = dbmd.getSchemas();
-        while(rsS.next()) {
-          String schemaName = rsS.getString(1);
-          
-          ResultSet rsT = dbmd.getTables(schemaName, schemaName, null, types);
-          while (rsT.next()){
-            String tableName = rsT.getString(3);
-            if(tableName.equals("PLAN_TABLE")) continue;
-            System.out.println(schemaName + "." + tableName);
-            ps.println(schemaName + "." + tableName);
-            iCount++;
-          }
-          rsT.close();
-          
-        }
-        rsS.close();
-      }
       
       System.out.println(iCount + " tables returned");
       ps.println(iCount + " tables returned");

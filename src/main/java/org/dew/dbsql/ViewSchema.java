@@ -17,8 +17,7 @@ class ViewSchema
 {
   protected Connection conn;
   protected int iDEF_MAX_ROWS;
-  protected String sORA_CATALOG;
-  protected String sORA_SCHEMA;
+  protected String sDefSchema;
   
   public
   ViewSchema(Connection conn, String sSchema, int iDefMaxRows)
@@ -26,8 +25,7 @@ class ViewSchema
   {
     this.conn          = conn;
     this.iDEF_MAX_ROWS = iDefMaxRows;
-    this.sORA_CATALOG  = sSchema;
-    this.sORA_SCHEMA   = sSchema;
+    this.sDefSchema    = sSchema;
     if(iDEF_MAX_ROWS < 1) iDEF_MAX_ROWS = 20;
   }
   
@@ -73,16 +71,24 @@ class ViewSchema
     throws Exception
   {
     List listResult = new ArrayList();
+    
     String[] types = new String[1];
     types[0] = "TABLE";
     DatabaseMetaData dbmd = conn.getMetaData();
-    ResultSet rs = dbmd.getTables(sORA_CATALOG, sORA_SCHEMA, null, types);
-    while (rs.next()){
+    ResultSet rs = dbmd.getTables(null, null, null, types);
+    while(rs.next()){
+      String schema    = rs.getString(2);
       String tableName = rs.getString(3);
-      if(tableName.equals("PLAN_TABLE")) continue;
+      
+      if(schema != null && schema.startsWith("APEX_")) continue;
+      if(schema != null && schema.startsWith("SYS"))   continue;
+      if(schema != null && schema.endsWith("SYS"))     continue;
+      if(tableName.indexOf('$') >= 0 || tableName.equals("PLAN_TABLE")) continue;
+      
       listResult.add(tableName);
     }
     rs.close();
+    
     return listResult;
   }
   

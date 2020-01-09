@@ -14,8 +14,7 @@ class ExportSchema
   protected PrintStream out_fk  = null;
   protected PrintStream out_idx = null;
   
-  protected String sORA_CATALOG;
-  protected String sORA_SCHEMA;
+  protected String sDefSchema;
   
   protected final static int ORACLE   = 0;
   protected final static int MYSQL    = 1;
@@ -35,8 +34,7 @@ class ExportSchema
   {
     this.conn = conn;
     
-    this.sORA_CATALOG = sSchema;
-    this.sORA_SCHEMA  = sSchema;
+    this.sDefSchema = sSchema;
     
     this.sDestination = sDestination;
     if(this.sDestination == null || this.sDestination.length() == 0) {
@@ -56,9 +54,9 @@ class ExportSchema
       this.iDestination = HSQLDB;
     }
     
-    this.sFILE        = System.getProperty("user.home") + File.separator + sORA_CATALOG + ".sql";
-    this.sFILE_FK     = System.getProperty("user.home") + File.separator + sORA_CATALOG + "_FK.sql";
-    this.sFILE_IDX    = System.getProperty("user.home") + File.separator + sORA_CATALOG + "_IDX.sql";
+    this.sFILE        = System.getProperty("user.home") + File.separator + sDefSchema + ".sql";
+    this.sFILE_FK     = System.getProperty("user.home") + File.separator + sDefSchema + "_FK.sql";
+    this.sFILE_IDX    = System.getProperty("user.home") + File.separator + sDefSchema + "_IDX.sql";
     
     this.out     = getPrintStream(sFILE);
     this.out_fk  = getPrintStream(sFILE_FK);
@@ -102,7 +100,7 @@ class ExportSchema
   {
     printHeader();
     
-    System.out.println("Read catalog " + sORA_CATALOG + "...");
+    System.out.println("Read catalog " + sDefSchema + "...");
     // Lettura tabelle
     List listTables = getTables();
     
@@ -141,17 +139,17 @@ class ExportSchema
     throws Exception
   {
     out.println("--");
-    out.println("-- Tables of schema " + sORA_CATALOG);
+    out.println("-- Tables of schema " + sDefSchema);
     out.println("--");
     out.println();
     
     out_fk.println("--");
-    out_fk.println("-- Foreign Keys Alter tables of schema " + sORA_CATALOG);
+    out_fk.println("-- Foreign Keys Alter tables of schema " + sDefSchema);
     out_fk.println("--");
     out_fk.println();
     
     out_idx.println("--");
-    out_idx.println("-- Indexes of schema " + sORA_CATALOG);
+    out_idx.println("-- Indexes of schema " + sDefSchema);
     out_idx.println("--");
     out_idx.println();
   }
@@ -165,30 +163,19 @@ class ExportSchema
     String[] types = new String[1];
     types[0] = "TABLE";
     DatabaseMetaData dbmd = conn.getMetaData();
-    ResultSet rs = dbmd.getTables(sORA_CATALOG, sORA_SCHEMA, null, types);
-    while (rs.next()){
+    ResultSet rs = dbmd.getTables(null, null, null, types);
+    while(rs.next()){
+      String schema    = rs.getString(2);
       String tableName = rs.getString(3);
-      if(tableName.equals("PLAN_TABLE")) continue;
+      
+      if(schema != null && schema.startsWith("APEX_")) continue;
+      if(schema != null && schema.startsWith("SYS"))   continue;
+      if(schema != null && schema.endsWith("SYS"))     continue;
+      if(tableName.indexOf('$') >= 0 || tableName.equals("PLAN_TABLE")) continue;
+      
       listResult.add(tableName);
     }
     rs.close();
-    
-    if(listResult.size() == 0) {
-      ResultSet rsS = dbmd.getSchemas();
-      while(rsS.next()) {
-        String schemaName = rsS.getString(1);
-        
-        ResultSet rsT = dbmd.getTables(schemaName, schemaName, null, types);
-        while (rsT.next()){
-          String tableName = rsT.getString(3);
-          if(tableName.equals("PLAN_TABLE")) continue;
-          listResult.add(tableName);
-        }
-        rsT.close();
-        
-      }
-      rsS.close();
-    }
     
     return listResult;
   }
@@ -479,7 +466,7 @@ class ExportSchema
     
     DatabaseMetaData dbmd = conn.getMetaData();
     Map mapIndexes = new HashMap();
-    ResultSet rs = dbmd.getIndexInfo(sORA_CATALOG, sORA_SCHEMA, sTable, false, true);
+    ResultSet rs = dbmd.getIndexInfo(null, null, sTable, false, true);
     
     while (rs.next()) {
       int iNonUnique    = rs.getInt(4);

@@ -177,15 +177,10 @@ class ExecuteSQL
       printMessage(ex, iLine);
     }
     finally {
-      if(rs   != null) try{ rs.close();   } catch(Exception ex) {}
-      if(stm  != null) try{ stm.close();  } catch(Exception ex) {}
-      if(conn != null) try{
-        conn.commit();
-        conn.close(); 
-      } 
-      catch(Exception ex) {
-        ex.printStackTrace();
-      }
+      if(rs   != null) try{ rs.close();    } catch(Exception ex) {}
+      if(stm  != null) try{ stm.close();   } catch(Exception ex) {}
+      if(conn != null) try{ conn.commit(); } catch(Exception ex) {}
+      if(conn != null) try{ conn.close();  } catch(Exception ex) {}
     }
     System.out.println("----------------------------------------");
     System.out.println("Errors: " + iErrors + ", Last Line Err.: " + iLastLineErr);
