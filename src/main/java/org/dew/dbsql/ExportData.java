@@ -138,6 +138,16 @@ class ExportData
       psD.println("");
     }
     
+    if(iDestination == MYSQL) {
+      psS.println("CREATE TABLE TAB_SEQUENCES(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INT NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
+    }
+    else if(iDestination == POSTGRES) {
+      psS.println("CREATE TABLE TAB_SEQUENCES(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INTEGER NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
+    }
+    else if(iDestination == HSQLDB) {
+      psS.println("CREATE TABLE TAB_SEQUENCES(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL BIGINT NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
+    }
+    
     List listTables = getTables();
     for(int i = 0; i < listTables.size(); i++) {
       String sTable = (String) listTables.get(i);
@@ -362,6 +372,13 @@ class ExportData
           psS.println("DROP SEQUENCE SEQ_" + sTable + ";");
           psS.println("CREATE SEQUENCE SEQ_" + sTable + " START WITH " + iStartWith + " MAXVALUE 999999999999 MINVALUE 1 NOCYCLE NOCACHE NOORDER;");
           psS.println("");
+        }
+      }
+      else {
+        if(iMaxFirstValue > 0 && psS != null) {
+          int iStartWith = iMaxFirstValue + 1;
+          psS.println("INSERT INTO TAB_SEQUENCES VALUES('SEQ_" + sTable + "', " + iStartWith + ");");
+          psS.println("COMMIT;");
         }
       }
     }
