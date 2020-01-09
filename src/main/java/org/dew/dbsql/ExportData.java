@@ -162,6 +162,9 @@ class ExportData
     if(iDestination == HSQLDB) {
       psD.println("\n");
       psD.println("SHUTDOWN COMPACT;\n");
+      
+      psS.println("\n");
+      psS.println("SHUTDOWN COMPACT;\n");
     }
     
     psD.close();
