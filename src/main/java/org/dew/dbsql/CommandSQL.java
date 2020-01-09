@@ -688,16 +688,36 @@ class CommandSQL
       types[0] = "TABLE";
       DatabaseMetaData dbmd = conn.getMetaData();
       ResultSet rs = dbmd.getTables(schema, schema, null, types);
-      while (rs.next()){
+      while(rs.next()){
         String tableName = rs.getString(3);
         if(tableName.equals("PLAN_TABLE")) continue;
         System.out.println(tableName);
         ps.println(tableName);
         iCount++;
       }
+      rs.close();
+      
+      if(iCount == 0) {
+        ResultSet rsS = dbmd.getSchemas();
+        while(rsS.next()) {
+          String schemaName = rsS.getString(1);
+          
+          ResultSet rsT = dbmd.getTables(schemaName, schemaName, null, types);
+          while (rsT.next()){
+            String tableName = rsT.getString(3);
+            if(tableName.equals("PLAN_TABLE")) continue;
+            System.out.println(schemaName + "." + tableName);
+            ps.println(schemaName + "." + tableName);
+            iCount++;
+          }
+          rsT.close();
+          
+        }
+        rsS.close();
+      }
+      
       System.out.println(iCount + " tables returned");
       ps.println(iCount + " tables returned");
-      rs.close();
     }
     catch(Exception ex) {
       System.out.println(ex.getMessage());

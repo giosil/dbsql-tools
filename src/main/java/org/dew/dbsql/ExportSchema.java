@@ -161,6 +161,7 @@ class ExportSchema
     throws Exception
   {
     List listResult = new ArrayList();
+    
     String[] types = new String[1];
     types[0] = "TABLE";
     DatabaseMetaData dbmd = conn.getMetaData();
@@ -171,6 +172,24 @@ class ExportSchema
       listResult.add(tableName);
     }
     rs.close();
+    
+    if(listResult.size() == 0) {
+      ResultSet rsS = dbmd.getSchemas();
+      while(rsS.next()) {
+        String schemaName = rsS.getString(1);
+        
+        ResultSet rsT = dbmd.getTables(schemaName, schemaName, null, types);
+        while (rsT.next()){
+          String tableName = rsT.getString(3);
+          if(tableName.equals("PLAN_TABLE")) continue;
+          listResult.add(tableName);
+        }
+        rsT.close();
+        
+      }
+      rsS.close();
+    }
+    
     return listResult;
   }
   
@@ -313,7 +332,7 @@ class ExportSchema
             sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.TIME) {
-            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIME" + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.TIMESTAMP) {
             sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
@@ -326,14 +345,17 @@ class ExportSchema
           }
           else if(iSize <= 20) {
             if(iDigits > 0) {
-              sb.append("\t" + sFieldName + " DOUBLE" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " DECIMAL(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+            }
+            else if(iSize > 10) {
+              sb.append("\t" + sFieldName + " BIGINT" + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " BIGINT" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
             }
           }
           else {
-            sb.append("\t" + sFieldName + " BIGINT" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
           }
           
           break;

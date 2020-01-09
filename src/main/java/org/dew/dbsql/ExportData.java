@@ -145,7 +145,7 @@ class ExportData
       psS.println("CREATE TABLE TAB_SEQUENCES(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INTEGER NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
     }
     else if(iDestination == HSQLDB) {
-      psS.println("CREATE TABLE TAB_SEQUENCES(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL BIGINT NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
+      psS.println("CREATE TABLE TAB_SEQUENCES(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INT NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
     }
     
     List listTables = getTables();
@@ -178,6 +178,7 @@ class ExportData
     throws Exception
   {
     List listResult = new ArrayList();
+    
     String[] types = new String[1];
     types[0] = "TABLE";
     DatabaseMetaData dbmd = conn.getMetaData();
@@ -188,6 +189,24 @@ class ExportData
       listResult.add(tableName);
     }
     rs.close();
+    
+    if(listResult.size() == 0) {
+      ResultSet rsS = dbmd.getSchemas();
+      while(rsS.next()) {
+        String schemaName = rsS.getString(1);
+        
+        ResultSet rsT = dbmd.getTables(schemaName, schemaName, null, types);
+        while (rsT.next()){
+          String tableName = rsT.getString(3);
+          if(tableName.equals("PLAN_TABLE")) continue;
+          listResult.add(tableName);
+        }
+        rsT.close();
+        
+      }
+      rsS.close();
+    }
+    
     return listResult;
   }
   
