@@ -45,16 +45,15 @@ class ExportSchema
     else {
       this.sDestination = this.sDestination.trim().toLowerCase();
     }
-    
-    iDestination = ORACLE;
+    this.iDestination = ORACLE;
     if(this.sDestination.startsWith("m")) {
-      iDestination = MYSQL;
+      this.iDestination = MYSQL;
     }
     else if(this.sDestination.startsWith("p")) {
-      iDestination = POSTGRES;
+      this.iDestination = POSTGRES;
     }
     else if(this.sDestination.startsWith("h")) {
-      iDestination = HSQLDB;
+      this.iDestination = HSQLDB;
     }
     
     this.sFILE        = System.getProperty("user.home") + File.separator + sORA_CATALOG + ".sql";
@@ -69,8 +68,8 @@ class ExportSchema
   public static
   void main(String[] args)
   {
-    if(args == null || args.length < 1) {
-      System.err.println("Usage: ExportSchema data_source [destination]");
+    if(args == null || args.length == 0) {
+      System.err.println("Usage: ExportSchema data_source [oracle|mysql|postgres|hsqldb]");
       System.exit(1);
     }
     Connection conn = null;
@@ -123,6 +122,18 @@ class ExportSchema
     }
     
     printFooter();
+    
+    if(iDestination == HSQLDB && out != null) {
+      out.println("SHUTDOWN COMPACT;\n");
+    }
+    if(iDestination == HSQLDB && out_fk != null) {
+      out_fk.println("\n");
+      out_fk.println("SHUTDOWN COMPACT;\n");
+    }
+    if(iDestination == HSQLDB && out_idx != null) {
+      out_idx.println("\n");
+      out_idx.println("SHUTDOWN COMPACT;\n");
+    }
   }
   
   public
@@ -436,11 +447,6 @@ class ExportSchema
       
       out_fk.println(sAlter);
     }
-    
-    if(iDestination == HSQLDB) {
-      out_fk.println("\n");
-      out_fk.println("SHUTDOWN COMPACT;\n");
-    }
   }
   
   public
@@ -485,11 +491,6 @@ class ExportSchema
       String sCreate = "CREATE INDEX " + sIndexName + " ON " + sTable + "(" + sFields + ");";
       out_idx.println(sCreate);
     }
-    
-    if(iDestination == HSQLDB) {
-      out_idx.println("\n");
-      out_idx.println("SHUTDOWN COMPACT;\n");
-    }
   }
   
   public
@@ -497,10 +498,6 @@ class ExportSchema
     throws Exception
   {
     out.println("\n");
-    
-    if(iDestination == HSQLDB) {
-      out.println("SHUTDOWN COMPACT;\n");
-    }
   }
   
   protected static

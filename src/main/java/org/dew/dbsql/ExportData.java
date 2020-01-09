@@ -25,34 +25,80 @@ class ExportData
   
   protected String sORA_CATALOG;
   protected String sORA_SCHEMA;
+  
+  protected final static int ORACLE   = 0;
+  protected final static int MYSQL    = 1;
+  protected final static int POSTGRES = 2;
+  protected final static int HSQLDB   = 3;
+  
+  protected String sDestination;
+  protected int iDestination = ORACLE;
+  
   protected List<String> tables;
   
   public
-  ExportData(Connection conn, String sSchema)
+  ExportData(Connection conn, String sSchema, String sDestination)
     throws Exception
   {
     this.conn = conn;
     
     this.sORA_CATALOG = sSchema;
     this.sORA_SCHEMA  = sSchema;
+    
+    this.sDestination = sDestination;
+    if(this.sDestination == null || this.sDestination.length() == 0) {
+      this.sDestination = "oracle";
+    }
+    else {
+      this.sDestination = this.sDestination.trim().toLowerCase();
+    }
+    this.iDestination = ORACLE;
+    if(this.sDestination.startsWith("m")) {
+      this.iDestination = MYSQL;
+    }
+    else if(this.sDestination.startsWith("p")) {
+      this.iDestination = POSTGRES;
+    }
+    else if(this.sDestination.startsWith("h")) {
+      this.iDestination = HSQLDB;
+    }
   }
   
   public
-  ExportData(Connection conn, String sSchema, List<String> tables)
+  ExportData(Connection conn, String sSchema, String sDestination, List<String> tables)
     throws Exception
   {
     this.conn = conn;
     
     this.sORA_CATALOG = sSchema;
     this.sORA_SCHEMA  = sSchema;
-    this.tables       = tables;
+    
+    this.sDestination = sDestination;
+    if(this.sDestination == null || this.sDestination.length() == 0) {
+      this.sDestination = "oracle";
+    }
+    else {
+      this.sDestination = this.sDestination.trim().toLowerCase();
+    }
+    this.iDestination = ORACLE;
+    if(this.sDestination.startsWith("m")) {
+      this.iDestination = MYSQL;
+    }
+    else if(this.sDestination.startsWith("p")) {
+      this.iDestination = POSTGRES;
+    }
+    else if(this.sDestination.startsWith("h")) {
+      this.iDestination = HSQLDB;
+    }
+    
+    this.tables = tables;
   }
   
   public static
   void main(String[] args)
   {
-    if(args == null || args.length != 1) {
-      System.err.println("Usage: ExportData data_source");
+    if(args == null || args.length == 0) {
+      System.err.println("Usage: ExportData data_source [oracle|mysql|postgres|hsqldb]");
       System.exit(1);
     }
     Connection conn = null;
@@ -64,7 +110,9 @@ class ExportData
         System.exit(1);
       }
       
-      ExportData tool = new ExportData(conn, JdbcDataSource.getUser(args[0]));
+      String sDestination = args.length > 1 ? args[1] : "oracle";
+      
+      ExportData tool = new ExportData(conn, JdbcDataSource.getUser(args[0]), sDestination);
       tool.export();
       
       System.out.println("Scripts generated in " + System.getProperty("user.home"));
@@ -85,8 +133,11 @@ class ExportData
     PrintStream psS = getPrintStream(sORA_SCHEMA + "_seq.sql");
     int iDefMaxRows = 1000;
     
-    psD.println("set define off;");
-    psD.println("");
+    if(iDestination == ORACLE) {
+      psD.println("set define off;");
+      psD.println("");
+    }
+    
     List listTables = getTables();
     for(int i = 0; i < listTables.size(); i++) {
       String sTable = (String) listTables.get(i);
@@ -97,8 +148,15 @@ class ExportData
       }
       export(sTable, null, iDefMaxRows, psD, psS);
     }
+    
+    if(iDestination == HSQLDB) {
+      psD.println("\n");
+      psD.println("SHUTDOWN COMPACT;\n");
+    }
+    
     psD.close();
     psS.close();
+    
     System.out.println("End.");
   }
   
@@ -199,8 +257,15 @@ class ExportData
               else {
                 String sMonth = iMonth < 10 ? "0" + iMonth : String.valueOf(iMonth);
                 String sDay   = iDay   < 10 ? "0" + iDay   : String.valueOf(iDay);
-                sbValues.append("TO_DATE('" + iYear + "-" + sMonth + "-" + sDay + "','YYYY-MM-DD')");
-                // sbValues.append("'" + iYear + "-" + sMonth + "-" + sDay + "'");
+                switch (iDestination) {
+                case ORACLE:
+                  sbValues.append("TO_DATE('" + iYear + "-" + sMonth + "-" + sDay + "','YYYY-MM-DD')");
+                  break;
+                
+                default:
+                  sbValues.append("'" + iYear + "-" + sMonth + "-" + sDay + "'");
+                  break;
+                }
               }
             }
             break;
@@ -224,8 +289,16 @@ class ExportData
               else {
                 String sMonth = iMonth < 10 ? "0" + iMonth : String.valueOf(iMonth);
                 String sDay   = iDay   < 10 ? "0" + iDay   : String.valueOf(iDay);
-                sbValues.append("TO_TIMESTAMP('" + iYear + "-" + sMonth + "-" + sDay + " " + iHour + ":" + iMinute + ":" + iSecond + "','YYYY-MM-DD HH24:MI:SS')");
-                // sbValues.append("'" + iYear + "-" + sMonth + "-" + sDay + " " + iHour + ":" + iMinute + ":" + iSecond + "'");
+                
+                switch (iDestination) {
+                case ORACLE:
+                  sbValues.append("TO_TIMESTAMP('" + iYear + "-" + sMonth + "-" + sDay + " " + iHour + ":" + iMinute + ":" + iSecond + "','YYYY-MM-DD HH24:MI:SS')");
+                  break;
+                
+                default:
+                  sbValues.append("'" + iYear + "-" + sMonth + "-" + sDay + " " + iHour + ":" + iMinute + ":" + iSecond + "'");
+                  break;
+                }
               }
             }
             break;
@@ -234,12 +307,28 @@ class ExportData
           case Types.CLOB:
             byte[] abBlobContent = getBLOBContent(rs, i);
             if(abBlobContent == null || abBlobContent.length == 0) {
-              sbValues.append("EMPTY_BLOB()");
+              switch (iDestination) {
+              case ORACLE:
+                sbValues.append("EMPTY_BLOB()");
+                break;
+              
+              default:
+                sbValues.append("NULL");
+                break;
+              }
             }
             else {
               String sBlobContent = new String(abBlobContent);
-              if(sBlobContent.length() > 3000) sBlobContent = sBlobContent.substring(0, 3000);
-              sbValues.append("utl_raw.cast_to_raw('" + sBlobContent.replace("'", "''") + "')");
+              switch (iDestination) {
+              case ORACLE:
+                if(sBlobContent.length() > 3000) sBlobContent = sBlobContent.substring(0, 3000);
+                sbValues.append("utl_raw.cast_to_raw('" + sBlobContent.replace("'", "''").replace("\n", "\\n") + "')");
+                break;
+              
+              default:
+                sbValues.append("'" + sBlobContent.replace("'", "''").replace("\n", "\\n") + "'");
+                break;
+              }
             }
             break;
           default:
@@ -262,12 +351,18 @@ class ExportData
         iRows++;
         if(iMaxRows > 0 && iRows >= iMaxRows) break;
       }
-      psD.println("COMMIT;");
-      if(iMaxFirstValue > 0 && psS != null) {
-        int iStartWith = iMaxFirstValue + 1;
-        psS.println("DROP SEQUENCE SEQ_" + sTable + ";");
-        psS.println("CREATE SEQUENCE SEQ_" + sTable + " START WITH " + iStartWith + " MAXVALUE 999999999999 MINVALUE 1 NOCYCLE NOCACHE NOORDER;");
-        psS.println("");
+      
+      if(iRows > 0) {
+        psD.println("COMMIT;");
+      }
+      
+      if(iDestination == ORACLE) {
+        if(iMaxFirstValue > 0 && psS != null) {
+          int iStartWith = iMaxFirstValue + 1;
+          psS.println("DROP SEQUENCE SEQ_" + sTable + ";");
+          psS.println("CREATE SEQUENCE SEQ_" + sTable + " START WITH " + iStartWith + " MAXVALUE 999999999999 MINVALUE 1 NOCYCLE NOCACHE NOORDER;");
+          psS.println("");
+        }
       }
     }
     finally {
