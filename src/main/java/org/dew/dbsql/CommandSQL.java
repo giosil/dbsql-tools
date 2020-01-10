@@ -25,12 +25,42 @@ class CommandSQL
   protected PrintStream ps;
   protected List<String> listCommands = new ArrayList<String>();
   
+  protected final static int ORACLE   = 0;
+  protected final static int MYSQL    = 1;
+  protected final static int POSTGRES = 2;
+  protected final static int HSQLDB   = 3;
+  protected int iDatabase = ORACLE;
+  
+  protected String sDefSchema;
+  
   public
   CommandSQL(Connection conn, String sSchema)
     throws Exception
   {
     this.conn   = conn;
     this.ps     = new PrintStream(new File(sSchema + "_cmd.log"));
+    
+    this.sDefSchema = sSchema;
+    
+    try {
+      DatabaseMetaData dbmd = conn.getMetaData();
+      String sDBProductName = dbmd.getDatabaseProductName();
+      if(sDBProductName != null && sDBProductName.length() > 0) {
+        sDBProductName = sDBProductName.trim().toLowerCase();
+        this.iDatabase = ORACLE;
+        if(sDBProductName.startsWith("m")) {
+          this.iDatabase = MYSQL;
+        }
+        else if(sDBProductName.startsWith("p")) {
+          this.iDatabase = POSTGRES;
+        }
+        else if(sDBProductName.startsWith("h")) {
+          this.iDatabase = HSQLDB;
+        }
+      }
+    }
+    catch(Exception ex) {
+    }
   }
   
   public static
@@ -72,6 +102,7 @@ class CommandSQL
     System.out.println("exit     = exit from command sql");
     System.out.println("bye      = exit from command sql");
     System.out.println("tables   = list tables");
+    System.out.println("views    = list views");
     System.out.println("cat      = list catalogs");
     System.out.println("schemas  = list schemas");
     System.out.println("ver      = print product version");
@@ -93,53 +124,50 @@ class CommandSQL
     try {
       stm = conn.createStatement();
       do {
-        String sSQL = waitForInput();
+        String cmd = waitForInput();
         
-        if(sSQL == null) break;
-        if(sSQL.length() == 0) continue;
-        if(sSQL.endsWith(";")) {
-          sSQL = sSQL.substring(0, sSQL.length()-1);
+        if(cmd == null) break;
+        if(cmd.length() == 0) continue;
+        if(cmd.endsWith(";")) {
+          cmd = cmd.substring(0, cmd.length()-1);
         }
-        if(sSQL.equalsIgnoreCase("exit")) {
+        if(cmd.equalsIgnoreCase("exit")) {
           System.out.println("bye");
           ps.println("bye at " + new Date());
           break;
         }
-        if(sSQL.equalsIgnoreCase("bye"))  {
+        if(cmd.equalsIgnoreCase("bye"))  {
           System.out.println("bye");
           ps.println("bye at " + new Date());
           break;
         }
         
-        if(sSQL.equalsIgnoreCase("help")) {
+        if(cmd.equalsIgnoreCase("help")) {
           printHelp();
           continue;
         }
-        else
-        if(sSQL.equalsIgnoreCase("l")) {
+        else if(cmd.equalsIgnoreCase("l")) {
           if(sLast != null && sLast.length() > 0) {
-            sSQL = sLast;
+            cmd = sLast;
           }
           else {
             System.out.println("No commands executed");
             continue;
           }
         }
-        else
-        if(sSQL.startsWith("L ") || sSQL.startsWith("l ")) {
-          String sIdx = sSQL.substring(2).trim();
+        else if(cmd.startsWith("L ") || cmd.startsWith("l ")) {
+          String sIdx = cmd.substring(2).trim();
           int iIdx = 0;
           try { iIdx = Integer.parseInt(sIdx); } catch(Exception ex) {}
           if(listCommands != null && listCommands.size() > iIdx) {
-            sSQL = listCommands.get(iIdx);
+            cmd = listCommands.get(iIdx);
           }
           else {
             System.out.println("Invalid index (" + iIdx + ")");
             continue;
           }
         }
-        else
-        if(sSQL.equalsIgnoreCase("lc")) {
+        else if(cmd.equalsIgnoreCase("lc")) {
           if(listCommands != null && listCommands.size() > 0) {
             for(int i = 0; i < listCommands.size(); i++) {
               System.out.println(i + " " + listCommands.get(i));
@@ -147,8 +175,7 @@ class CommandSQL
           }
           continue;
         }
-        else
-        if(sSQL.equalsIgnoreCase("la")) {
+        else if(cmd.equalsIgnoreCase("la")) {
           List aliases = CommandAliases.getAliases();
           if(aliases != null && aliases.size() > 0) {
             for(int i = 0; i < aliases.size(); i++) {
@@ -158,62 +185,60 @@ class CommandSQL
           continue;
         }
         
-        if(sSQL.startsWith("$") && sSQL.length() > 1) {
+        if(cmd.startsWith("$") && cmd.length() > 1) {
           String sAlias = "";
           String sRight = "";
-          int iSep = sSQL.indexOf(' ');
+          int iSep = cmd.indexOf(' ');
           if(iSep > 0) {
-            sAlias = sSQL.substring(0,iSep);
-            sRight = sSQL.substring(iSep+1);
+            sAlias = cmd.substring(0,iSep);
+            sRight = cmd.substring(iSep+1);
           }
           else {
-            sAlias = sSQL;
+            sAlias = cmd;
             sRight = "";
           }
-          sSQL = CommandAliases.getAlias(sAlias);
-          if(sSQL == null || sSQL.length() == 0) {
+          cmd = CommandAliases.getAlias(sAlias);
+          if(cmd == null || cmd.length() == 0) {
             System.out.println("alias " + sAlias + " not found");
             continue;
           }
           if(sRight != null && sRight.length() > 0) {
-            sSQL += " " + sRight;
+            cmd += " " + sRight;
           }
         }
         
-        ps.println("# " + sSQL);
-        if(!sSQL.equals(sLast)) {
-          listCommands.add(sSQL);
+        ps.println("# " + cmd);
+        if(!cmd.equals(sLast)) {
+          listCommands.add(cmd);
         }
-        sLast = sSQL;
+        sLast = cmd;
         
-        if(sSQL.startsWith("tables") || sSQL.startsWith("TABLES") || sSQL.startsWith("Tables")) {
+        if(cmd.startsWith("tables") || cmd.startsWith("TABLES") || cmd.startsWith("Tables")) {
           printTables();
         }
-        else
-        if(sSQL.startsWith("cat") || sSQL.startsWith("CAT") || sSQL.startsWith("Cat")) {
+        else if(cmd.startsWith("views") || cmd.startsWith("VIEWS") || cmd.startsWith("Views")) {
+          printViews();
+        }
+        else if(cmd.startsWith("cat") || cmd.startsWith("CAT") || cmd.startsWith("Cat")) {
           printCatalogs();
         }
-        else
-        if(sSQL.startsWith("sche") || sSQL.startsWith("SCHE") || sSQL.startsWith("Sche")) {
+        else if(cmd.startsWith("sche") || cmd.startsWith("SCHE") || cmd.startsWith("Sche")) {
           printSchemas();
         }
-        else
-        if(sSQL.startsWith("ver") || sSQL.startsWith("VER") || sSQL.startsWith("Ver")) {
+        else if(cmd.startsWith("ver") || cmd.startsWith("VER") || cmd.startsWith("Ver")) {
           printVersion();
         }
-        else
-        if(sSQL.startsWith("auto") || sSQL.startsWith("AUTO") || sSQL.startsWith("Auto")) {
+        else if(cmd.startsWith("auto") || cmd.startsWith("AUTO") || cmd.startsWith("Auto")) {
           String sFlag = "t";
-          if(sSQL.length() > 5) sFlag = sSQL.substring(6);
+          if(cmd.length() > 5) sFlag = cmd.substring(6);
           char c0 = sFlag != null && sFlag.length() > 0 ? sFlag.charAt(0) : 't';
           boolean b = c0 == 't' || c0 == 'T' || c0 == 'y' || c0 == 'Y' || c0 == 's' || c0 == 'S' || c0 == '1' || c0 == 'j';
           conn.setAutoCommit(b);
           System.out.println("setAutoCommit(" + b + ")");
           ps.println("setAutoCommit(" + b + ")");
         }
-        else
-        if(sSQL.startsWith("desc ") || sSQL.startsWith("DESC ") || sSQL.startsWith("Desc ")) {
-          String sTable = sSQL.substring(5);
+        else if(cmd.startsWith("desc ") || cmd.startsWith("DESC ") || cmd.startsWith("Desc ")) {
+          String sTable = cmd.substring(5);
           if(sTable != null && sTable.length() > 0) {
             try {
               printCreateTable(sTable);
@@ -228,33 +253,32 @@ class CommandSQL
             ps.println("Invalid table name");
           }
         }
-        else
-        if(sSQL.startsWith("exp ") || sSQL.startsWith("EXP ") || sSQL.startsWith("Exp ")) {
-          sSQL = sSQL.substring(4);
-          boolean boSelect = sSQL.startsWith("SELECT ") || sSQL.startsWith("select ") || sSQL.startsWith("Select ");
+        else if(cmd.startsWith("exp ") || cmd.startsWith("EXP ") || cmd.startsWith("Exp ")) {
+          cmd = cmd.substring(4);
+          boolean boSelect = cmd.startsWith("SELECT ") || cmd.startsWith("select ") || cmd.startsWith("Select ");
           if(!boSelect) {
-            sSQL = "SELECT * FROM " + sSQL;
+            cmd = "SELECT * FROM " + cmd;
           }
           try {
             String sTable = "TABLE";
-            int iFrom = sSQL.indexOf("FROM");
-            if(iFrom < 0) iFrom = sSQL.indexOf("from");
-            if(iFrom < 0) iFrom = sSQL.indexOf("From");
+            int iFrom = cmd.indexOf("FROM");
+            if(iFrom < 0) iFrom = cmd.indexOf("from");
+            if(iFrom < 0) iFrom = cmd.indexOf("From");
             if(iFrom > 0) {
               int iEndTab = 0;
-              int iSpace  = sSQL.indexOf(' ', iFrom + 6);
+              int iSpace  = cmd.indexOf(' ', iFrom + 6);
               if(iSpace <= 0) {
-                iEndTab = sSQL.length();
+                iEndTab = cmd.length();
               }
               else {
                 iEndTab = iSpace;
               }
               if(iEndTab > 0) {
-                sTable = sSQL.substring(iFrom+4, iEndTab).trim();
+                sTable = cmd.substring(iFrom+4, iEndTab).trim();
                 if(sTable.indexOf(',') >= 0 || sTable.indexOf(' ') >= 0) sTable = "TABLE";
               }
             }
-            rs = stm.executeQuery(sSQL);
+            rs = stm.executeQuery(cmd);
             int iRows = exportResultSet(rs, sTable);
             rs.close();
             System.out.println(iRows + " rows exported.");
@@ -265,15 +289,14 @@ class CommandSQL
             ps.println(ex.getMessage());
           }
         }
-        else
-        if(sSQL.startsWith("view ") || sSQL.startsWith("VIEW ") || sSQL.startsWith("View ")) {
-          sSQL = sSQL.substring(4);
-          boolean boSelect = sSQL.startsWith("SELECT ") || sSQL.startsWith("select ") || sSQL.startsWith("Select ");
+        else if(cmd.startsWith("view ") || cmd.startsWith("VIEW ") || cmd.startsWith("View ")) {
+          cmd = cmd.substring(4);
+          boolean boSelect = cmd.startsWith("SELECT ") || cmd.startsWith("select ") || cmd.startsWith("Select ");
           if(!boSelect) {
-            sSQL = "SELECT * FROM " + sSQL;
+            cmd = "SELECT * FROM " + cmd;
           }
           try {
-            rs = stm.executeQuery(sSQL);
+            rs = stm.executeQuery(cmd);
             printResultSet(rs, 0);
             rs.close();
           }
@@ -282,34 +305,33 @@ class CommandSQL
             ps.println(ex.getMessage());
           }
         }
-        else
-        if(sSQL.startsWith("blob ") || sSQL.startsWith("BLOB ") || sSQL.startsWith("Blob ")) {
-          sSQL = sSQL.substring(5);
-          boolean boSelect = sSQL.startsWith("SELECT ") || sSQL.startsWith("select ") || sSQL.startsWith("Select ");
+        else if(cmd.startsWith("blob ") || cmd.startsWith("BLOB ") || cmd.startsWith("Blob ")) {
+          cmd = cmd.substring(5);
+          boolean boSelect = cmd.startsWith("SELECT ") || cmd.startsWith("select ") || cmd.startsWith("Select ");
           if(!boSelect) {
-            sSQL = "SELECT * FROM " + sSQL;
+            cmd = "SELECT * FROM " + cmd;
           }
           String sMessage = "";
           try {
             String sTable = "TABLE";
-            int iFrom = sSQL.indexOf("FROM");
-            if(iFrom < 0) iFrom = sSQL.indexOf("from");
-            if(iFrom < 0) iFrom = sSQL.indexOf("From");
+            int iFrom = cmd.indexOf("FROM");
+            if(iFrom < 0) iFrom = cmd.indexOf("from");
+            if(iFrom < 0) iFrom = cmd.indexOf("From");
             if(iFrom > 0) {
               int iEndTab = 0;
-              int iSpace  = sSQL.indexOf(' ', iFrom + 6);
+              int iSpace  = cmd.indexOf(' ', iFrom + 6);
               if(iSpace <= 0) {
-                iEndTab = sSQL.length();
+                iEndTab = cmd.length();
               }
               else {
                 iEndTab = iSpace;
               }
               if(iEndTab > 0) {
-                sTable = sSQL.substring(iFrom+4, iEndTab).trim();
+                sTable = cmd.substring(iFrom+4, iEndTab).trim();
                 if(sTable.indexOf(',') >= 0 || sTable.indexOf(' ') >= 0) sTable = "TABLE";
               }
             }
-            rs = stm.executeQuery(sSQL);
+            rs = stm.executeQuery(cmd);
             if(rs.next()) {
               byte[] abBlobContent = getBLOBContent(rs, 1);
               if(abBlobContent == null || abBlobContent.length == 0) {
@@ -333,10 +355,9 @@ class CommandSQL
             ps.println(ex.getMessage());
           }
         }
-        else
-        if(sSQL.startsWith("select ") || sSQL.startsWith("SELECT ") || sSQL.startsWith("Select ")) {
+        else if(cmd.startsWith("select ") || cmd.startsWith("SELECT ") || cmd.startsWith("Select ")) {
           try {
-            rs = stm.executeQuery(sSQL);
+            rs = stm.executeQuery(cmd);
             int iRows = printResultSet(rs, 20000);
             rs.close();
             System.out.println(iRows + " rows returned.");
@@ -347,8 +368,7 @@ class CommandSQL
             ps.println(ex.getMessage());
           }
         }
-        else
-        if(sSQL.startsWith("commit") || sSQL.startsWith("COMMIT") || sSQL.startsWith("Commit")) {
+        else if(cmd.startsWith("commit") || cmd.startsWith("COMMIT") || cmd.startsWith("Commit")) {
           try {
             conn.commit();
             System.out.println("commit executed.");
@@ -359,8 +379,7 @@ class CommandSQL
             ps.println(ex.getMessage());
           }
         }
-        else
-        if(sSQL.startsWith("rollback") || sSQL.startsWith("ROLLBACK") || sSQL.startsWith("Rollback")) {
+        else if(cmd.startsWith("rollback") || cmd.startsWith("ROLLBACK") || cmd.startsWith("Rollback")) {
           try {
             conn.rollback();
             System.out.println("rollback executed.");
@@ -371,10 +390,9 @@ class CommandSQL
             ps.println(ex.getMessage());
           }
         }
-        else 
-        if(sSQL.startsWith("update ") || sSQL.startsWith("UPDATE ") || sSQL.startsWith("Update ")) {
+        else if(cmd.startsWith("update ") || cmd.startsWith("UPDATE ") || cmd.startsWith("Update ")) {
           try {
-            int iRows = stm.executeUpdate(sSQL);
+            int iRows = stm.executeUpdate(cmd);
             System.out.println(iRows + " updated");
             ps.println(iRows + " updated");
           }
@@ -383,10 +401,9 @@ class CommandSQL
             ps.println(ex.getMessage());
           }
         }
-        else 
-        if(sSQL.startsWith("delete ") || sSQL.startsWith("DELETE ") || sSQL.startsWith("Delete ")) {
+        else if(cmd.startsWith("delete ") || cmd.startsWith("DELETE ") || cmd.startsWith("Delete ")) {
           try {
-            int iRows = stm.executeUpdate(sSQL);
+            int iRows = stm.executeUpdate(cmd);
             System.out.println(iRows + " deleted");
             ps.println(iRows + " deleted");
           }
@@ -395,10 +412,9 @@ class CommandSQL
             ps.println(ex.getMessage());
           }
         }
-        else 
-        if(sSQL.startsWith("insert ") || sSQL.startsWith("INSERT ") || sSQL.startsWith("Insert ")) {
+        else if(cmd.startsWith("insert ") || cmd.startsWith("INSERT ") || cmd.startsWith("Insert ")) {
           try {
-            int iRows = stm.executeUpdate(sSQL);
+            int iRows = stm.executeUpdate(cmd);
             System.out.println(iRows + " inserted");
             ps.println(iRows + " inserted");
           }
@@ -409,7 +425,7 @@ class CommandSQL
         }
         else {
           try {
-            int iRows = stm.executeUpdate(sSQL);
+            int iRows = stm.executeUpdate(cmd);
             if(iRows > 0) {
               System.out.println(iRows + " affected");
               ps.println(iRows + " affected");
@@ -433,12 +449,13 @@ class CommandSQL
     finally {
       if(rs   != null) try{ rs.close();   } catch(Exception ex) {}
       if(stm  != null) try{ stm.close();  } catch(Exception ex) {}
-      if(conn != null) try{
-        conn.commit();
-        conn.close(); 
-      } 
+      try {
+        if(conn != null && !conn.isClosed()) {
+          conn.commit();
+          conn.close();
+        }
+      }
       catch(Exception ex) {
-        ex.printStackTrace();
       }
     }
   }
@@ -685,16 +702,16 @@ class CommandSQL
       String[] types = new String[1];
       types[0] = "TABLE";
       DatabaseMetaData dbmd = conn.getMetaData();
-      ResultSet rs = dbmd.getTables(null, null, null, types);
+      ResultSet rs = null;
+      if(this.iDatabase == ORACLE) {
+        rs = dbmd.getTables(this.sDefSchema, this.sDefSchema, null, types);
+      }
+      else {
+        rs = dbmd.getTables(null, null, null, types);
+      }
       while(rs.next()){
-        String schema    = rs.getString(2);
         String tableName = rs.getString(3);
-        
-        if(schema != null && schema.startsWith("APEX_")) continue;
-        if(schema != null && schema.startsWith("SYS"))   continue;
-        if(schema != null && schema.endsWith("SYS"))     continue;
         if(tableName.indexOf('$') >= 0 || tableName.equals("PLAN_TABLE")) continue;
-        
         System.out.println(tableName);
         ps.println(tableName);
         iCount++;
@@ -703,6 +720,39 @@ class CommandSQL
       
       System.out.println(iCount + " tables returned");
       ps.println(iCount + " tables returned");
+    }
+    catch(Exception ex) {
+      System.out.println(ex.getMessage());
+      ps.println(ex.getMessage());
+    }
+  }
+  
+  protected
+  void printViews()
+  {
+    try {
+      int iCount = 0;
+      String[] types = new String[1];
+      types[0] = "VIEW";
+      DatabaseMetaData dbmd = conn.getMetaData();
+      ResultSet rs = null;
+      if(this.iDatabase == ORACLE) {
+        rs = dbmd.getTables(this.sDefSchema, this.sDefSchema, null, types);
+      }
+      else {
+        rs = dbmd.getTables(null, null, null, types);
+      }
+      while(rs.next()){
+        String tableName = rs.getString(3);
+        if(tableName.indexOf('$') >= 0 || tableName.equals("PLAN_TABLE")) continue;
+        System.out.println(tableName);
+        ps.println(tableName);
+        iCount++;
+      }
+      rs.close();
+      
+      System.out.println(iCount + " views returned");
+      ps.println(iCount + " views returned");
     }
     catch(Exception ex) {
       System.out.println(ex.getMessage());
@@ -749,38 +799,70 @@ class CommandSQL
         sFieldName = rpad(sFieldName, ' ', 18);
         
         if(iFieldType == java.sql.Types.VARCHAR) {
-          sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.CHAR) {
-          sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.DATE) {
-          sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.TIME) {
-          sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.TIMESTAMP) {
-          sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.BLOB) {
-          sb.append("\t" + sFieldName + " BLOB" + sNullable + ",\n");
-        }
-        else
-        if(iFieldType == java.sql.Types.CLOB) {
-          sb.append("\t" + sFieldName + " CBLOB" + sNullable + ",\n");
-        }
-        else {
-          if(iSize <= 20) {
-            sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+          if(iDatabase == ORACLE) {
+            sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sNullable + ",\n");
           }
           else {
+            sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+          }
+        }
+        else if(iFieldType == java.sql.Types.CHAR) {
+          sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
+        }
+        else if(iFieldType == java.sql.Types.DATE) {
+          sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
+        }
+        else if(iFieldType == java.sql.Types.TIME) {
+          if(iDatabase == ORACLE) {
+            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
+          }
+          else {
+            sb.append("\t" + sFieldName + " TIME" + sNullable + ",\n");
+          }
+        }
+        else if(iFieldType == java.sql.Types.TIMESTAMP) {
+          if(iDatabase == ORACLE) {
+            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
+          }
+          else {
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+          }
+        }
+        else if(iFieldType == java.sql.Types.BLOB) {
+          sb.append("\t" + sFieldName + " BLOB" + sNullable + ",\n");
+        }
+        else if(iFieldType == java.sql.Types.CLOB) {
+          if(iDatabase == ORACLE) {
+            sb.append("\t" + sFieldName + " CBLOB" + sNullable + ",\n");
+          }
+          else {
+            sb.append("\t" + sFieldName + " TEXT" + sNullable + ",\n");
+          }
+        }
+        else if(iSize <= 20) {
+          if(iDigits > 0) {
+            if(iDatabase == ORACLE) {
+              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+            }
+            else {
+              sb.append("\t" + sFieldName + " DECIMAL(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+            }
+          }
+          else {
+            if(iDatabase == ORACLE) {
+              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+            }
+            else {
+              sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
+            }
+          }
+        }
+        else {
+          if(iDatabase == ORACLE) {
             sb.append("\t" + sFieldName + " NUMBER" + sNullable + ",\n");
+          }
+          else {
+            sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
           }
         }
       }

@@ -95,23 +95,19 @@ class ExecuteSQL
             printMessage(ex, iLine);
           }
         }
-        else
-        if(sSQL.startsWith("SET ") || sSQL.startsWith("set ") || sSQL.startsWith("Set ")) {
+        else if(sSQL.startsWith("SET ") || sSQL.startsWith("set ") || sSQL.startsWith("Set ")) {
           // Ignored
           System.out.println("[ignored] "  + sSQL);
         }
-        else
-        if(sSQL.startsWith("@") || sSQL.startsWith("#") || sSQL.startsWith("$")) {
+        else if(sSQL.startsWith("@") || sSQL.startsWith("#") || sSQL.startsWith("$")) {
           // Ignored
           System.out.println("[ignored] "  + sSQL);
         }
-        else
-        if(sSQL.startsWith("SPOOL") || sSQL.startsWith("spool") || sSQL.startsWith("Spool")) {
+        else if(sSQL.startsWith("SPOOL") || sSQL.startsWith("spool") || sSQL.startsWith("Spool")) {
           // Ignored
           System.out.println("[ignored] "  + sSQL);
         }
-        else 
-        if(sSQL.startsWith("UPDATE ") || sSQL.startsWith("update ") || sSQL.startsWith("Update ")) {
+        else if(sSQL.startsWith("UPDATE ") || sSQL.startsWith("update ") || sSQL.startsWith("Update ")) {
           try {
             System.out.println(sSQL);
             int iRows = stm.executeUpdate(sSQL);
@@ -123,8 +119,7 @@ class ExecuteSQL
             printMessage(ex, iLine);
           }
         }
-        else 
-        if(sSQL.startsWith("DELETE ") || sSQL.startsWith("delete ") || sSQL.startsWith("Delete ")) {
+        else if(sSQL.startsWith("DELETE ") || sSQL.startsWith("delete ") || sSQL.startsWith("Delete ")) {
           try {
             System.out.println(sSQL);
             int iRows = stm.executeUpdate(sSQL);
@@ -136,8 +131,7 @@ class ExecuteSQL
             printMessage(ex, iLine);
           }
         }
-        else 
-        if(sSQL.startsWith("INSERT ") || sSQL.startsWith("insert ") || sSQL.startsWith("Insert ")) {
+        else if(sSQL.startsWith("INSERT ") || sSQL.startsWith("insert ") || sSQL.startsWith("Insert ")) {
           try {
             System.out.println(sSQL);
             int iRows = stm.executeUpdate(sSQL);
@@ -179,8 +173,14 @@ class ExecuteSQL
     finally {
       if(rs   != null) try{ rs.close();    } catch(Exception ex) {}
       if(stm  != null) try{ stm.close();   } catch(Exception ex) {}
-      if(conn != null) try{ conn.commit(); } catch(Exception ex) {}
-      if(conn != null) try{ conn.close();  } catch(Exception ex) {}
+      try {
+        if(conn != null && !conn.isClosed()) {
+          conn.commit();
+          conn.close();
+        }
+      }
+      catch(Exception ex) {
+      }
     }
     System.out.println("----------------------------------------");
     System.out.println("Errors: " + iErrors + ", Last Line Err.: " + iLastLineErr);

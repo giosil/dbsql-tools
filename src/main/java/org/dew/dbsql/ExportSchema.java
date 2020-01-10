@@ -67,7 +67,7 @@ class ExportSchema
   void main(String[] args)
   {
     if(args == null || args.length == 0) {
-      System.err.println("Usage: ExportSchema data_source [oracle|mysql|postgres|hsqldb]");
+      System.err.println("Usage: ExportSchema data_source [oracle|mysql|mariadb|postgres|hsqldb|h2]");
       System.exit(1);
     }
     Connection conn = null;
@@ -163,16 +163,18 @@ class ExportSchema
     String[] types = new String[1];
     types[0] = "TABLE";
     DatabaseMetaData dbmd = conn.getMetaData();
-    ResultSet rs = dbmd.getTables(null, null, null, types);
+    
+    ResultSet rs = null;
+    String sDBProductName = dbmd.getDatabaseProductName();
+    if(sDBProductName != null && sDBProductName.trim().toLowerCase().startsWith("o")) {
+      rs = dbmd.getTables(sDefSchema, sDefSchema, null, types);
+    }
+    else {
+      rs = dbmd.getTables(null, null, null, types);
+    }
     while(rs.next()){
-      String schema    = rs.getString(2);
       String tableName = rs.getString(3);
-      
-      if(schema != null && schema.startsWith("APEX_")) continue;
-      if(schema != null && schema.startsWith("SYS"))   continue;
-      if(schema != null && schema.endsWith("SYS"))     continue;
       if(tableName.indexOf('$') >= 0 || tableName.equals("PLAN_TABLE")) continue;
-      
       listResult.add(tableName);
     }
     rs.close();
