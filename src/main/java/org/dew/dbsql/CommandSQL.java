@@ -95,23 +95,23 @@ class CommandSQL
   public static
   void printHelp()
   {
-    System.out.println("help     = this guide");
-    System.out.println("lc       = list commands");
-    System.out.println("la       = list aliases");
-    System.out.println("l [idx]  = last command [by index]");
-    System.out.println("exit     = exit from command sql");
-    System.out.println("bye      = exit from command sql");
-    System.out.println("tables   = list tables");
-    System.out.println("views    = list views");
-    System.out.println("cat      = list catalogs");
-    System.out.println("schemas  = list schemas");
-    System.out.println("ver      = print product version");
-    System.out.println("desc <t> = script table t");
-    System.out.println("view <t> = view 20 records of table t");
-    System.out.println("exp  <t> = export table t");
-    System.out.println("exp  <q> = export query result");
-    System.out.println("blob <q> = export blob field");
-    System.out.println("auto <b> = set auto commit");
+    System.out.println("help       = this guide");
+    System.out.println("lc         = list commands");
+    System.out.println("la         = list aliases");
+    System.out.println("l [idx]    = last command [by index]");
+    System.out.println("exit       = exit from command sql");
+    System.out.println("bye        = exit from command sql");
+    System.out.println("tables [s] = list tables");
+    System.out.println("views  [s] = list views");
+    System.out.println("cat        = list catalogs");
+    System.out.println("schemas    = list schemas");
+    System.out.println("ver        = print product version");
+    System.out.println("desc <t>   = script table t");
+    System.out.println("view <t>   = view 20 records of table t");
+    System.out.println("exp  <t>   = export table t");
+    System.out.println("exp  <q>   = export query result");
+    System.out.println("blob <q>   = export blob field");
+    System.out.println("auto <b>   = set auto commit");
   }
   
   public
@@ -214,10 +214,22 @@ class CommandSQL
         sLast = cmd;
         
         if(cmd.startsWith("tables") || cmd.startsWith("TABLES") || cmd.startsWith("Tables")) {
-          printTables();
+          int iSep = cmd.indexOf(' ');
+          if(iSep > 0) {
+            printTables(cmd.substring(iSep + 1));
+          }
+          else {
+            printTables(null);
+          }
         }
         else if(cmd.startsWith("views") || cmd.startsWith("VIEWS") || cmd.startsWith("Views")) {
-          printViews();
+          int iSep = cmd.indexOf(' ');
+          if(iSep > 0) {
+            printViews(cmd.substring(iSep + 1));
+          }
+          else {
+            printViews(null);
+          }
         }
         else if(cmd.startsWith("cat") || cmd.startsWith("CAT") || cmd.startsWith("Cat")) {
           printCatalogs();
@@ -473,6 +485,7 @@ class CommandSQL
       ex.printStackTrace();
       return null;
     }
+    if(length < 1) return "";
     return new String(result, 0, length).trim();
   }
   
@@ -695,8 +708,11 @@ class CommandSQL
   }
   
   protected
-  void printTables()
+  void printTables(String sSelSchema)
   {
+    if(sSelSchema != null && sSelSchema.trim().length() == 0) {
+      sSelSchema = null;
+    }
     try {
       int iCount = 0;
       String[] types = new String[1];
@@ -704,10 +720,15 @@ class CommandSQL
       DatabaseMetaData dbmd = conn.getMetaData();
       ResultSet rs = null;
       if(this.iDatabase == ORACLE) {
-        rs = dbmd.getTables(this.sDefSchema, this.sDefSchema, null, types);
+        if(sSelSchema != null && sSelSchema.length() > 0) {
+          rs = dbmd.getTables(this.sDefSchema, sSelSchema, null, types);
+        }
+        else {
+          rs = dbmd.getTables(this.sDefSchema, this.sDefSchema, null, types);
+        }
       }
       else {
-        rs = dbmd.getTables(null, null, null, types);
+        rs = dbmd.getTables(null, sSelSchema, null, types);
       }
       while(rs.next()){
         String tableName = rs.getString(3);
@@ -728,8 +749,11 @@ class CommandSQL
   }
   
   protected
-  void printViews()
+  void printViews(String sSelSchema)
   {
+    if(sSelSchema != null && sSelSchema.trim().length() == 0) {
+      sSelSchema = null;
+    }
     try {
       int iCount = 0;
       String[] types = new String[1];
@@ -737,10 +761,15 @@ class CommandSQL
       DatabaseMetaData dbmd = conn.getMetaData();
       ResultSet rs = null;
       if(this.iDatabase == ORACLE) {
-        rs = dbmd.getTables(this.sDefSchema, this.sDefSchema, null, types);
+        if(sSelSchema != null && sSelSchema.length() > 0) {
+          rs = dbmd.getTables(this.sDefSchema, sSelSchema, null, types);
+        }
+        else {
+          rs = dbmd.getTables(this.sDefSchema, this.sDefSchema, null, types);
+        }
       }
       else {
-        rs = dbmd.getTables(null, null, null, types);
+        rs = dbmd.getTables(null, sSelSchema, null, types);
       }
       while(rs.next()){
         String tableName = rs.getString(3);
