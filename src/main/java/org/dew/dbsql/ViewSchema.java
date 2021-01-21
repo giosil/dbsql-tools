@@ -13,7 +13,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-@SuppressWarnings({"rawtypes","unchecked"})
 public 
 class ViewSchema 
 {
@@ -61,7 +60,7 @@ class ViewSchema
   void view()
     throws Exception
   {
-    List listTables = getTables();
+    List<String> listTables = getTables();
     for(int i = 0; i < listTables.size(); i++) {
       String sTable = (String) listTables.get(i);
       view(sTable, null, iDEF_MAX_ROWS);
@@ -69,10 +68,10 @@ class ViewSchema
   }
   
   public
-  List getTables()
+  List<String> getTables()
     throws Exception
   {
-    List listResult = new ArrayList();
+    List<String> listResult = new ArrayList<String>();
     
     String[] types = new String[1];
     types[0] = "TABLE";

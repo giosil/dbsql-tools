@@ -4,7 +4,6 @@ import java.io.*;
 import java.util.*;
 import java.sql.*;
 
-@SuppressWarnings({"rawtypes","unchecked"})
 public
 class ExportSchema
 {
@@ -102,10 +101,10 @@ class ExportSchema
     
     System.out.println("Read catalog " + sDefSchema + "...");
     // Lettura tabelle
-    List listTables = getTables();
+    List<String> listTables = getTables();
     
     for(int i = 0; i < listTables.size(); i++) {
-      String sTable = (String) listTables.get(i);
+      String sTable = listTables.get(i);
       
       System.out.println(sTable);
       
@@ -155,10 +154,10 @@ class ExportSchema
   }
   
   public
-  List getTables()
+  List<String> getTables()
     throws Exception
   {
-    List listResult = new ArrayList();
+    List<String> listResult = new ArrayList<String>();
     
     String[] types = new String[1];
     types[0] = "TABLE";
@@ -186,7 +185,7 @@ class ExportSchema
   void printCreateTable(String sTable, boolean boDrop)
     throws Exception
   {
-    List listPK = new ArrayList();
+    List<String> listPK = new ArrayList<String>();
     
     if(boDrop) out.println("DROP TABLE " + sTable);
     
@@ -213,12 +212,23 @@ class ExportSchema
       StringBuffer sb = new StringBuffer();
       rs = dbmd.getColumns(null, null, sTable, null);
       while (rs.next()) {
-        String sFieldName = rs.getString(4);
-        int iFieldType    = rs.getInt(5);
-        int iSize         = rs.getInt(7);
-        int iDigits       = rs.getInt(9);
-        int iNullable     = rs.getInt(11);
+        String sFieldName = rs.getString(4);  // COLUMN_NAME
+        int iFieldType    = rs.getInt(5);     // DATA_TYPE
+        int iSize         = rs.getInt(7);     // COLUMN_SIZE
+        int iDigits       = rs.getInt(9);     // DECIMAL_DIGITS
+        int iNullable     = rs.getInt(11);    // NULLABLE
+        String sDefValue  = rs.getString(13); // COLUMN_DEF
         String sNullable  = iNullable == DatabaseMetaData.columnNoNulls ? " NOT NULL" : "";
+        String sDefault   = "";
+        if(sDefValue != null && sDefValue.length() > 0) {
+          if(iFieldType == java.sql.Types.VARCHAR || iFieldType == java.sql.Types.CHAR || iFieldType == java.sql.Types.BLOB || iFieldType == java.sql.Types.CLOB || 
+              iFieldType == java.sql.Types.DATE || iFieldType == java.sql.Types.TIME || iFieldType == java.sql.Types.TIMESTAMP) {
+            sDefault = " DEFAULT '" + sDefValue.replace("'", "''") + "'";
+          }
+          else {
+            sDefault = " DEFAULT " + sDefValue;
+          }
+        }
         
         sFieldName = rpad(sFieldName, ' ', 18);
         
@@ -226,40 +236,40 @@ class ExportSchema
         case MYSQL:
           if(iFieldType == java.sql.Types.VARCHAR) {
             if(iSize > 255) {
-              sb.append("\t" + sFieldName + " TEXT " + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " TEXT " + sDefault + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
             }
           }
           else if(iFieldType == java.sql.Types.CHAR) {
-            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.DATE) {
-            sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " DATE" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.TIME) {
-            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.TIMESTAMP) {
-            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.BLOB) {
-            sb.append("\t" + sFieldName + " TEXT" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TEXT" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.CLOB) {
-            sb.append("\t" + sFieldName + " TEXT" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TEXT" + sDefault + sNullable + ",\n");
           }
           else if(iSize <= 20) {
             if(iDigits > 0) {
-              sb.append("\t" + sFieldName + " DECIMAL(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " DECIMAL(" + iSize + "," + iDigits + ")" + sDefault + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " INT" + sDefault + sNullable + ",\n");
             }
           }
           else {
-            sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " INT" + sDefault + sNullable + ",\n");
           }
           
           break;
@@ -267,40 +277,40 @@ class ExportSchema
         case POSTGRES:
           if(iFieldType == java.sql.Types.VARCHAR) {
             if(iSize > 255) {
-              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
             }
           }
           else if(iFieldType == java.sql.Types.CHAR) {
-            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.DATE) {
-            sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " DATE" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.TIME) {
-            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.TIMESTAMP) {
-            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.BLOB) {
-            sb.append("\t" + sFieldName + " BYTEA" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " BYTEA" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.CLOB) {
-            sb.append("\t" + sFieldName + " TEXT" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TEXT" + sDefault + sNullable + ",\n");
           }
           else if(iSize <= 20) {
             if(iDigits > 0) {
-              sb.append("\t" + sFieldName + " NUMERIC(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " NUMERIC(" + iSize + "," + iDigits + ")" + sDefault + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " INTEGER" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " INTEGER" + sDefault + sNullable + ",\n");
             }
           }
           else {
-            sb.append("\t" + sFieldName + " INTEGER" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " INTEGER" + sDefault + sNullable + ",\n");
           }
           
           break;
@@ -308,43 +318,43 @@ class ExportSchema
         case HSQLDB:
           if(iFieldType == java.sql.Types.VARCHAR) {
             if(iSize > 255) {
-              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
             }
           }
           else if(iFieldType == java.sql.Types.CHAR) {
-            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.DATE) {
-            sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " DATE" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.TIME) {
-            sb.append("\t" + sFieldName + " TIME" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIME" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.TIMESTAMP) {
-            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.BLOB) {
-            sb.append("\t" + sFieldName + " BLOB" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " BLOB" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.CLOB) {
-            sb.append("\t" + sFieldName + " VARCHAR(16777216)" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " VARCHAR(16777216)" + sDefault + sNullable + ",\n");
           }
           else if(iSize <= 20) {
             if(iDigits > 0) {
-              sb.append("\t" + sFieldName + " DECIMAL(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " DECIMAL(" + iSize + "," + iDigits + ")" + sDefault + sNullable + ",\n");
             }
             else if(iSize > 10) {
-              sb.append("\t" + sFieldName + " BIGINT" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " BIGINT" + sDefault + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " INT" + sDefault + sNullable + ",\n");
             }
           }
           else {
-            sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " INT" + sDefault + sNullable + ",\n");
           }
           
           break;
@@ -352,40 +362,40 @@ class ExportSchema
         default:
           if(iFieldType == java.sql.Types.VARCHAR) {
             if(iSize > 255) {
-              sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sDefault + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sDefault + sNullable + ",\n");
             }
           }
           else if(iFieldType == java.sql.Types.CHAR) {
-            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.DATE) {
-            sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " DATE" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.TIME) {
-            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.TIMESTAMP) {
-            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.BLOB) {
-            sb.append("\t" + sFieldName + " BLOB" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " BLOB" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.CLOB) {
-            sb.append("\t" + sFieldName + " CBLOB" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " CBLOB" + sDefault + sNullable + ",\n");
           }
           else if(iSize <= 20) {
             if(iDigits > 0) {
-              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sDefault + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sDefault + sNullable + ",\n");
             }
           }
           else {
-            sb.append("\t" + sFieldName + " NUMBER" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " NUMBER" + sDefault + sNullable + ",\n");
           }
           
           break;
@@ -408,10 +418,11 @@ class ExportSchema
   void printForeignKeys(String sTable)
     throws Exception
   {
-    List listForeignKeys = new ArrayList();
+    List<String> listForeignKeys = new ArrayList<String>();
     
     DatabaseMetaData dbmd = conn.getMetaData();
-    Map mapForeingKeys = new HashMap();
+    
+    Map<String, String[]> mapForeingKeys = new HashMap<String, String[]>();
     ResultSet rs = dbmd.getImportedKeys(null, null, sTable);
     while (rs.next()) {
       String sForeignTable = rs.getString(3);
@@ -439,9 +450,9 @@ class ExportSchema
     Collections.sort(listForeignKeys);
     
     for(int i = 0; i < listForeignKeys.size(); i++) {
-      String sFKName = (String) listForeignKeys.get(i);
+      String sFKName = listForeignKeys.get(i);
       
-      String[] ssFields = (String[]) mapForeingKeys.get(sFKName);
+      String[] ssFields = mapForeingKeys.get(sFKName);
       String sForeignTable  = ssFields[0];
       String sTableFields   = ssFields[1];
       String sForeignFields = ssFields[2];
@@ -464,10 +475,11 @@ class ExportSchema
   void printIndexes(String sTable)
     throws Exception
   {
-    List listIndexes = new ArrayList();
+    List<String> listIndexes = new ArrayList<String>();
     
     DatabaseMetaData dbmd = conn.getMetaData();
-    Map mapIndexes = new HashMap();
+    
+    Map<String, String> mapIndexes = new HashMap<String, String>();
     ResultSet rs = dbmd.getIndexInfo(null, null, sTable, false, true);
     
     while (rs.next()) {
@@ -478,7 +490,7 @@ class ExportSchema
       if(iNonUnique == 0)    continue;
       if(sIndexName == null) continue;
       
-      String sFields = (String) mapIndexes.get(sIndexName);
+      String sFields = mapIndexes.get(sIndexName);
       if(sFields == null) {
         mapIndexes.put(sIndexName, sFieldName);
       }
@@ -536,7 +548,7 @@ class ExportSchema
     int iTextLength = text.length();
     if(iTextLength >= length) return text;
     int diff = length - iTextLength;
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append(text);
     for(int i = 0; i < diff; i++) sb.append(c);
     return sb.toString();

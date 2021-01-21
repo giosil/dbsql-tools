@@ -19,7 +19,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
-@SuppressWarnings({"rawtypes","unchecked"})
 public 
 class CommandSQL
 {
@@ -178,7 +177,7 @@ class CommandSQL
           continue;
         }
         else if(cmd.equalsIgnoreCase("la")) {
-          List aliases = CommandAliases.getAliases();
+          List<String> aliases = CommandAliases.getAliases();
           if(aliases != null && aliases.size() > 0) {
             for(int i = 0; i < aliases.size(); i++) {
               System.out.println(i + " " + aliases.get(i));
@@ -795,7 +794,7 @@ class CommandSQL
   void printCreateTable(String sTable)
     throws Exception
   {
-    List listPK = new ArrayList();
+    List<String> listPK = new ArrayList<String>();
     
     sTable = sTable.toUpperCase();
     
@@ -820,80 +819,91 @@ class CommandSQL
       StringBuffer sb = new StringBuffer();
       rs = dbmd.getColumns(null, null, sTable, null);
       while (rs.next()) {
-        String sFieldName = rs.getString(4);
-        int iFieldType    = rs.getInt(5);
-        int iSize         = rs.getInt(7);
-        int iDigits       = rs.getInt(9);
-        int iNullable     = rs.getInt(11);
+        String sFieldName = rs.getString(4);  // COLUMN_NAME
+        int iFieldType    = rs.getInt(5);     // DATA_TYPE
+        int iSize         = rs.getInt(7);     // COLUMN_SIZE
+        int iDigits       = rs.getInt(9);     // DECIMAL_DIGITS
+        int iNullable     = rs.getInt(11);    // NULLABLE
+        String sDefValue  = rs.getString(13); // COLUMN_DEF
         String sNullable  = iNullable == DatabaseMetaData.columnNoNulls ? " NOT NULL" : "";
+        String sDefault   = "";
+        if(sDefValue != null && sDefValue.length() > 0) {
+          if(iFieldType == java.sql.Types.VARCHAR || iFieldType == java.sql.Types.CHAR || iFieldType == java.sql.Types.BLOB || iFieldType == java.sql.Types.CLOB || 
+              iFieldType == java.sql.Types.DATE || iFieldType == java.sql.Types.TIME || iFieldType == java.sql.Types.TIMESTAMP) {
+            sDefault = " DEFAULT '" + sDefValue.replace("'", "''") + "'";
+          }
+          else {
+            sDefault = " DEFAULT " + sDefValue;
+          }
+        }
         
         sFieldName = rpad(sFieldName, ' ', 18);
         
         if(iFieldType == java.sql.Types.VARCHAR) {
           if(iDatabase == ORACLE) {
-            sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " VARCHAR2(" + iSize + ")" + sDefault + sNullable + ",\n");
           }
           else {
-            sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " VARCHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
           }
         }
         else if(iFieldType == java.sql.Types.CHAR) {
-          sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sNullable + ",\n");
+          sb.append("\t" + sFieldName + " CHAR(" + iSize + ")" + sDefault + sNullable + ",\n");
         }
         else if(iFieldType == java.sql.Types.DATE) {
-          sb.append("\t" + sFieldName + " DATE" + sNullable + ",\n");
+          sb.append("\t" + sFieldName + " DATE" + sDefault + sNullable + ",\n");
         }
         else if(iFieldType == java.sql.Types.TIME) {
           if(iDatabase == ORACLE) {
-            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sDefault + sNullable + ",\n");
           }
           else {
-            sb.append("\t" + sFieldName + " TIME" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIME" + sDefault + sNullable + ",\n");
           }
         }
         else if(iFieldType == java.sql.Types.TIMESTAMP) {
           if(iDatabase == ORACLE) {
-            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIMESTAMP(6)" + sDefault + sNullable + ",\n");
           }
           else {
-            sb.append("\t" + sFieldName + " TIMESTAMP" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TIMESTAMP" + sDefault + sNullable + ",\n");
           }
         }
         else if(iFieldType == java.sql.Types.BLOB) {
-          sb.append("\t" + sFieldName + " BLOB" + sNullable + ",\n");
+          sb.append("\t" + sFieldName + " BLOB" + sDefault + sNullable + ",\n");
         }
         else if(iFieldType == java.sql.Types.CLOB) {
           if(iDatabase == ORACLE) {
-            sb.append("\t" + sFieldName + " CBLOB" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " CBLOB" + sDefault + sNullable + ",\n");
           }
           else {
-            sb.append("\t" + sFieldName + " TEXT" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " TEXT" + sDefault + sNullable + ",\n");
           }
         }
         else if(iSize <= 20) {
           if(iDigits > 0) {
             if(iDatabase == ORACLE) {
-              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sDefault + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " DECIMAL(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " DECIMAL(" + iSize + "," + iDigits + ")" + sDefault + sNullable + ",\n");
             }
           }
           else {
             if(iDatabase == ORACLE) {
-              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " NUMBER(" + iSize + "," + iDigits + ")" + sDefault + sNullable + ",\n");
             }
             else {
-              sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
+              sb.append("\t" + sFieldName + " INT" + sDefault + sNullable + ",\n");
             }
           }
         }
         else {
           if(iDatabase == ORACLE) {
-            sb.append("\t" + sFieldName + " NUMBER" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " NUMBER" + sDefault + sNullable + ",\n");
           }
           else {
-            sb.append("\t" + sFieldName + " INT" + sNullable + ",\n");
+            sb.append("\t" + sFieldName + " INT" + sDefault + sNullable + ",\n");
           }
         }
       }
@@ -926,7 +936,7 @@ class CommandSQL
     int iTextLength = text.length();
     if(iTextLength >= length) return text;
     int diff = length - iTextLength;
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append(text);
     for(int i = 0; i < diff; i++) sb.append(c);
     return sb.toString();

@@ -4,7 +4,6 @@ import java.util.*;
 import java.io.*;
 import java.net.URL;
 
-@SuppressWarnings({"rawtypes","unchecked"})
 public
 class CommandAliases
 {
@@ -45,14 +44,15 @@ class CommandAliases
   }
   
   public static
-  List getAliases()
+  List<String> getAliases()
     throws Exception
   {
-    if(aliases == null) return new ArrayList(0);
-    List listResult = new ArrayList();
-    Iterator iterator = aliases.keySet().iterator();
+    if(aliases == null) return new ArrayList<String>(0);
+    
+    List<String> listResult = new ArrayList<String>();
+    Iterator<Object> iterator = aliases.keySet().iterator();
     while(iterator.hasNext()) {
-      listResult.add(iterator.next());
+      listResult.add((String) iterator.next());
     }
     Collections.sort(listResult);
     for(int i = 0; i < listResult.size(); i++) {

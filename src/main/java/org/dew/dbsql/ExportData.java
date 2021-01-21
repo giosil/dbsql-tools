@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-@SuppressWarnings({"rawtypes","unchecked"})
 public 
 class ExportData 
 {
@@ -147,7 +146,7 @@ class ExportData
       psS.println("CREATE TABLE TAB_SEQUENCES(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INT NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
     }
     
-    List listTables = getTables();
+    List<String> listTables = getTables();
     for(int i = 0; i < listTables.size(); i++) {
       String sTable = (String) listTables.get(i);
       if(tables != null && tables.size() > 0) {
@@ -173,10 +172,10 @@ class ExportData
   }
   
   public
-  List getTables()
+  List<String> getTables()
     throws Exception
   {
-    List listResult = new ArrayList();
+    List<String> listResult = new ArrayList<String>();
     
     String[] types = new String[1];
     types[0] = "TABLE";
