@@ -1,6 +1,6 @@
 # DBSQL-Tools Samples
 
-In this folder there is a migration example.
+Samples of scripts to perform a migration.
 
 ## Contributors
 
