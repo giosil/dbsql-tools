@@ -830,7 +830,12 @@ class CommandSQL
         if(sDefValue != null && sDefValue.length() > 0) {
           if(iFieldType == java.sql.Types.VARCHAR || iFieldType == java.sql.Types.CHAR || iFieldType == java.sql.Types.BLOB || iFieldType == java.sql.Types.CLOB || 
               iFieldType == java.sql.Types.DATE || iFieldType == java.sql.Types.TIME || iFieldType == java.sql.Types.TIMESTAMP) {
-            sDefault = " DEFAULT '" + sDefValue.replace("'", "''") + "'";
+            if(sDefValue.startsWith("'") && sDefValue.endsWith("'") && sDefValue.length() > 1) {
+              sDefault = " DEFAULT " + sDefValue;
+            }
+            else {
+              sDefault = " DEFAULT '" + sDefValue.replace("'", "''") + "'";
+            }
           }
           else {
             sDefault = " DEFAULT " + sDefValue;
