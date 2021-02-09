@@ -3,9 +3,23 @@ package org.dew.dbsql;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.sql.*;
+
+import java.sql.Blob;
+import java.sql.Connection;
 import java.sql.Date;
-import java.util.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.Statement;
+import java.sql.Timestamp;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 public
 class DB
@@ -229,7 +243,7 @@ class DB
     Statement stm = null;
     try {
       stm = conn.createStatement();
-      return toList(stm.executeQuery(sSQL));
+      return toListOfMap(stm.executeQuery(sSQL));
     }
     finally {
       if(stm != null) try{ stm.close(); } catch(Exception ex) {}
@@ -245,7 +259,7 @@ class DB
     try {
       pstm = conn.prepareStatement(sSQL);
       setParameters(pstm, 0, parameters);
-      return toList(pstm.executeQuery());
+      return toListOfMap(pstm.executeQuery());
     }
     finally {
       if(rs   != null) try{ rs.close();   } catch(Exception ex) {}
@@ -365,16 +379,13 @@ class DB
           if(iFieldType == java.sql.Types.CHAR || iFieldType == java.sql.Types.VARCHAR) {
             mapResult.put(sField, rs.getString(i));
           }
-          else
-          if(iFieldType == java.sql.Types.DATE) {
+          else if(iFieldType == java.sql.Types.DATE) {
             mapResult.put(sField, rs.getDate(i));
           }
-          else
-          if(iFieldType == java.sql.Types.TIME || iFieldType == java.sql.Types.TIMESTAMP) {
+          else if(iFieldType == java.sql.Types.TIME || iFieldType == java.sql.Types.TIMESTAMP) {
             mapResult.put(sField, rs.getTimestamp(i));
           }
-          else
-          if(iFieldType == java.sql.Types.BINARY || iFieldType == java.sql.Types.BLOB || iFieldType == java.sql.Types.CLOB) {
+          else if(iFieldType == java.sql.Types.BINARY || iFieldType == java.sql.Types.BLOB || iFieldType == java.sql.Types.CLOB) {
             mapResult.put(sField, getBLOBContent(rs, i));
           }
           else {
@@ -402,7 +413,7 @@ class DB
   }
   
   public static
-  List<Map<String, Object>> toList(ResultSet rs)
+  List<Map<String, Object>> toListOfMap(ResultSet rs)
     throws Exception
   {
     List<Map<String,Object>> listResult = new ArrayList<Map<String,Object>>();
@@ -424,16 +435,13 @@ class DB
           if(iFieldType == java.sql.Types.CHAR || iFieldType == java.sql.Types.VARCHAR) {
             mapResult.put(sField, rs.getString(i));
           }
-          else
-          if(iFieldType == java.sql.Types.DATE) {
+          else if(iFieldType == java.sql.Types.DATE) {
             mapResult.put(sField, rs.getDate(i));
           }
-          else
-          if(iFieldType == java.sql.Types.TIME || iFieldType == java.sql.Types.TIMESTAMP) {
+          else if(iFieldType == java.sql.Types.TIME || iFieldType == java.sql.Types.TIMESTAMP) {
             mapResult.put(sField, rs.getTimestamp(i));
           }
-          else
-          if(iFieldType == java.sql.Types.BINARY || iFieldType == java.sql.Types.BLOB || iFieldType == java.sql.Types.CLOB) {
+          else if(iFieldType == java.sql.Types.BINARY || iFieldType == java.sql.Types.BLOB || iFieldType == java.sql.Types.CLOB) {
             mapResult.put(sField, getBLOBContent(rs, i));
           }
           else {
@@ -455,7 +463,60 @@ class DB
       }
     }
     finally {
-      if(rs  != null) try{ rs.close();  } catch(Exception ex) {}
+      if(rs != null) try{ rs.close();  } catch(Exception ex) {}
+    }
+    return listResult;
+  }
+  
+  public static
+  List<List<Object>> toListOfList(ResultSet rs)
+    throws Exception
+  {
+    List<List<Object>> listResult = new ArrayList<List<Object>>();
+    
+    List<String> listFields = new ArrayList<String>();
+    try {
+      ResultSetMetaData rsmd = rs.getMetaData();
+      int iColumnCount = rsmd.getColumnCount();
+      while(rs.next()) {
+        List<Object> listRecord = new ArrayList<Object>();
+        listResult.add(listRecord);
+        
+        for(int i = 1; i <= iColumnCount; i++) {
+          String sField  = rsmd.getColumnName(i);
+          int iFieldType = rsmd.getColumnType(i);
+          if(iFieldType == java.sql.Types.CHAR || iFieldType == java.sql.Types.VARCHAR) {
+            listRecord.add(rs.getString(i));
+          }
+          else if(iFieldType == java.sql.Types.DATE) {
+            listRecord.add(rs.getDate(i));
+          }
+          else if(iFieldType == java.sql.Types.TIME || iFieldType == java.sql.Types.TIMESTAMP) {
+            listRecord.add(rs.getTimestamp(i));
+          }
+          else if(iFieldType == java.sql.Types.BINARY || iFieldType == java.sql.Types.BLOB || iFieldType == java.sql.Types.CLOB) {
+            listRecord.add(getBLOBContent(rs, i));
+          }
+          else {
+            String sValue = rs.getString(i);
+            if(sValue != null) {
+              if(sValue.indexOf('.') >= 0 || sValue.indexOf(',') >= 0) {
+                listRecord.add(new Double(rs.getDouble(i)));
+              }
+              else {
+                listRecord.add(new Integer(rs.getInt(i)));
+              }
+            }
+            else {
+              listRecord.add(null);
+            }
+          }
+          listFields.add(sField);
+        }
+      }
+    }
+    finally {
+      if(rs != null) try{ rs.close();  } catch(Exception ex) {}
     }
     return listResult;
   }
@@ -791,9 +852,7 @@ class DB
     throws Exception
   {
     Blob blob = rs.getBlob(index);
-    if(blob == null) {
-      return null;
-    }
+    if(blob == null) return null;
     
     InputStream is = blob.getBinaryStream();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -812,9 +871,7 @@ class DB
     throws Exception
   {
     Blob blob = rs.getBlob(sFieldName);
-    if(blob == null) {
-      return null;
-    }
+    if(blob == null) return null;
     
     InputStream is = blob.getBinaryStream();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
