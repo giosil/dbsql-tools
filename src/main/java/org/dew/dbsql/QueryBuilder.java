@@ -2,24 +2,73 @@ package org.dew.dbsql;
 
 import java.lang.reflect.Array;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 public
 class QueryBuilder
 {
   public final static String NULL = "null";
   
+  // static options
+  protected static boolean TO_UPPER    = false;
+  protected static String  DBMS        = "sql";
+  protected static Object  TRUE_VALUE  = new Integer(1);
+  protected static Object  FALSE_VALUE = new Integer(0);
+  
+  // instance options
+  protected boolean toUpper    = TO_UPPER;
+  protected String  dbms       = DBMS;
+  protected Object  trueValue  = TRUE_VALUE;
+  protected Object  falseValue = FALSE_VALUE;
+  
+  // state
   protected Map<String, Object> mapValues;
   protected List<String> listFields;
   protected List<String> listPresCase;
-  
-  protected boolean toUpper = false;
-  protected boolean oracle  = false;
   
   public
   QueryBuilder()
   {
     init();
+  }
+  
+  public static
+  void setToUpperRef(boolean boToUpper)
+  {
+    TO_UPPER = boToUpper;
+  }
+  
+  public static
+  void setDBMSRef(String dbms)
+  {
+    if(dbms == null || dbms.length() == 0) {
+      dbms = "sql";
+    }
+    else {
+      dbms = dbms.trim().toLowerCase();
+    }
+    DBMS = dbms;
+  }
+  
+  public static
+  void setTrueValueRef(Object trueValue)
+  {
+    TRUE_VALUE = trueValue;
+    if(TRUE_VALUE == null) TRUE_VALUE = new Integer(1);
+  }
+  
+  public static
+  void setFalseValueRef(Object falseValue)
+  {
+    FALSE_VALUE = falseValue;
+    if(FALSE_VALUE == null) FALSE_VALUE = new Integer(0);
   }
   
   public
@@ -29,9 +78,29 @@ class QueryBuilder
   }
   
   public
-  void setOracle(boolean oracle)
+  void setDBMS(String dbms)
   {
-    this.oracle = oracle;
+    if(dbms == null || dbms.length() == 0) {
+      dbms = "sql";
+    }
+    else {
+      dbms = dbms.trim().toLowerCase();
+    }
+    this.dbms = dbms;
+  }
+  
+  public
+  void setTrueValue(Object trueValue)
+  {
+    if(trueValue == null) trueValue = TRUE_VALUE;
+    this.trueValue = trueValue;
+  }
+  
+  public
+  void setFalseValue(Object falseValue)
+  {
+    if(falseValue == null) falseValue = FALSE_VALUE;
+    this.falseValue = falseValue;
   }
   
   public
@@ -62,8 +131,8 @@ class QueryBuilder
   void init()
   {
     mapValues    = new HashMap<String, Object>();
-    listFields   = new Vector<String>();
-    listPresCase = new Vector<String>();
+    listFields   = new ArrayList<String>();
+    listPresCase = new ArrayList<String>();
   }
   
   public
@@ -75,7 +144,7 @@ class QueryBuilder
   public
   String insert(String table, boolean boWithParameters)
   {
-    if(listFields.isEmpty()) return "";
+    if(listFields == null || listFields.isEmpty()) return "";
     
     StringBuilder sbSQL = new StringBuilder();
     
@@ -146,9 +215,9 @@ class QueryBuilder
   }
   
   public
-  String update(String table,  boolean boWithParameters)
+  String update(String table, boolean boWithParameters)
   {
-    if(listFields.isEmpty()) return "";
+    if(listFields == null || listFields.isEmpty()) return "";
     
     StringBuilder fields = new StringBuilder();
     StringBuilder sbSQL  = new StringBuilder();
@@ -237,7 +306,7 @@ class QueryBuilder
   public
   String select(String tables, Map<String, Object> htFilter, String sAdditionalClause, boolean boDistinct)
   {
-    if(listFields.isEmpty()) return "";
+    if(listFields == null || listFields.isEmpty()) return "";
     
     StringBuilder sbSQL = new StringBuilder();
     if(boDistinct) {
@@ -330,14 +399,12 @@ class QueryBuilder
         sWhereClause = sWhereClause.substring(0, sWhereClause.length() - 5);
         sbSQL.append("WHERE ");
         sbSQL.append(sWhereClause);
-        if(sAdditionalClause != null &&
-            sAdditionalClause.trim().length() > 0) {
+        if(sAdditionalClause != null && sAdditionalClause.trim().length() > 0) {
           sbSQL.append(" AND " + sAdditionalClause);
         }
       }
       else {
-        if(sAdditionalClause != null &&
-            sAdditionalClause.trim().length() > 0) {
+        if(sAdditionalClause != null && sAdditionalClause.trim().length() > 0) {
           sbSQL.append("WHERE " + sAdditionalClause);
         }
       }
@@ -419,6 +486,103 @@ class QueryBuilder
     return sResult;
   }
   
+  public
+  String decodeBoolean(Boolean value)
+  {
+    if(value == null) return "NULL";
+    
+    if(trueValue instanceof Number) {
+      if(value.booleanValue()) {
+        return trueValue.toString();
+      }
+      else {
+        return falseValue.toString();
+      }
+    }
+    else {
+      if(value.booleanValue()) {
+        return "'" + trueValue.toString() + "'";
+      }
+      else {
+        return "'" + falseValue.toString() + "'";
+      }
+    }
+  }
+  
+  public
+  String decodeBoolean(boolean value)
+  {
+    if(trueValue instanceof Number) {
+      if(value) {
+        return trueValue.toString();
+      }
+      else {
+        return falseValue.toString();
+      }
+    }
+    else {
+      if(value) {
+        return "'" + trueValue.toString() + "'";
+      }
+      else {
+        return "'" + falseValue.toString() + "'";
+      }
+    }
+  }
+  
+  public static
+  Object getBooleanValue(Object oValue)
+  {
+    if(oValue == null) return null;
+    boolean value = toBoolean(oValue, false);
+    if(value) {
+      return TRUE_VALUE;
+    }
+    else {
+      return FALSE_VALUE;
+    }
+  }
+  
+  public
+  String toString(Calendar cal)
+  {
+    if(cal == null) return "NULL";
+    
+    int iYear   = cal.get(java.util.Calendar.YEAR);
+    int iMonth  = cal.get(java.util.Calendar.MONTH) + 1;
+    int iDay    = cal.get(java.util.Calendar.DAY_OF_MONTH);
+    int iHour   = cal.get(Calendar.HOUR_OF_DAY);
+    int iMinute = cal.get(Calendar.MINUTE);
+    int iSecond = cal.get(Calendar.SECOND);
+    String sMonth  = iMonth  < 10 ? "0" + iMonth  : String.valueOf(iMonth);
+    String sDay    = iDay    < 10 ? "0" + iDay    : String.valueOf(iDay);
+    String sHour   = iHour   < 10 ? "0" + iHour   : String.valueOf(iHour);
+    String sMinute = iMinute < 10 ? "0" + iMinute : String.valueOf(iMinute);
+    String sSecond = iSecond < 10 ? "0" + iSecond : String.valueOf(iSecond);
+    if(dbms != null && dbms.indexOf("oracle") >= 0) {
+      return "TO_DATE('" + iYear + "-" + sMonth + "-" + sDay + " " + sHour + ":" + sMinute + ":" + sSecond + "','YYYY-MM-DD HH24:MI:SS')";
+    }
+    return "'" + iYear + "-" + sMonth + "-" + sDay + " " + sHour + ":" + sMinute + ":" + sSecond + "'";
+  }
+  
+  public
+  String toString(Date date)
+  {
+    if(date == null) return "NULL";
+    
+    Calendar cal = Calendar.getInstance();
+    cal.setTime(date);
+    int iYear  = cal.get(Calendar.YEAR);
+    int iMonth = cal.get(Calendar.MONTH) + 1;
+    int iDay   = cal.get(Calendar.DAY_OF_MONTH);
+    String sMonth = iMonth < 10 ? "0" + iMonth : String.valueOf(iMonth);
+    String sDay   = iDay   < 10 ? "0" + iDay   : String.valueOf(iDay);
+    if(dbms != null && dbms.indexOf("oracle") >= 0) {
+      return "TO_DATE('" + iYear + "-" + sMonth + "-" + sDay + "','YYYY-MM-DD')";
+    }
+    return "'" + iYear + "-" + sMonth + "-" + sDay + "'";
+  }
+  
   public static
   String doubleQuotes(String text)
   {
@@ -490,70 +654,18 @@ class QueryBuilder
   }
   
   public static
-  String decodeBoolean(Boolean value)
+  boolean toBoolean(Object object, boolean bDefault)
   {
-    if(value == null) return "";
-    if(value.booleanValue()) return "1";
-    return "0";
-  }
-  
-  public static
-  Integer decodeBooleanInteger(Boolean value)
-  {
-    if(value == null) return null;
-    if(value.booleanValue()) return 1;
-    return 0;
-  }
-  
-  public static
-  String decodeBoolean(boolean value)
-  {
-    return value ? "1" : "0";
-  }
-  
-  public static
-  int decodeBooleanInt(boolean value)
-  {
-    return value ? 1 : 0;
-  }
-  
-  public
-  String toString(Calendar cal)
-  {
-    if(cal == null) return "NULL";
-    
-    int iYear   = cal.get(java.util.Calendar.YEAR);
-    int iMonth  = cal.get(java.util.Calendar.MONTH) + 1;
-    int iDay    = cal.get(java.util.Calendar.DAY_OF_MONTH);
-    int iHour   = cal.get(Calendar.HOUR_OF_DAY);
-    int iMinute = cal.get(Calendar.MINUTE);
-    int iSecond = cal.get(Calendar.SECOND);
-    String sMonth  = iMonth  < 10 ? "0" + iMonth  : String.valueOf(iMonth);
-    String sDay    = iDay    < 10 ? "0" + iDay    : String.valueOf(iDay);
-    String sHour   = iHour   < 10 ? "0" + iHour   : String.valueOf(iHour);
-    String sMinute = iMinute < 10 ? "0" + iMinute : String.valueOf(iMinute);
-    String sSecond = iSecond < 10 ? "0" + iSecond : String.valueOf(iSecond);
-    if(oracle) {
-      return "TO_DATE('" + iYear + "-" + sMonth + "-" + sDay + " " + sHour + ":" + sMinute + ":" + sSecond + "','YYYY-MM-DD HH24:MI:SS')";
+    if(object == null) return bDefault;
+    if(object instanceof Boolean) {
+      return ((Boolean) object).booleanValue();
     }
-    return "'" + iYear + "-" + sMonth + "-" + sDay + " " + sHour + ":" + sMinute + ":" + sSecond + "'";
-  }
-  
-  public
-  String toString(Date date)
-  {
-    if(date == null) return "NULL";
-    
-    Calendar cal = Calendar.getInstance();
-    cal.setTime(date);
-    int iYear  = cal.get(Calendar.YEAR);
-    int iMonth = cal.get(Calendar.MONTH) + 1;
-    int iDay   = cal.get(Calendar.DAY_OF_MONTH);
-    String sMonth = iMonth < 10 ? "0" + iMonth : String.valueOf(iMonth);
-    String sDay   = iDay   < 10 ? "0" + iDay   : String.valueOf(iDay);
-    if(oracle) {
-      return "TO_DATE('" + iYear + "-" + sMonth + "-" + sDay + "','YYYY-MM-DD')";
+    if(object instanceof Number) {
+      return ((Number) object).intValue() != 0;
     }
-    return "'" + iYear + "-" + sMonth + "-" + sDay + "'";
+    String sValue = object.toString().trim();
+    if(sValue.length() == 0) return bDefault;
+    char c0 = sValue.charAt(0);
+    return "YySsTt1Jj".indexOf(c0) >= 0;
   }
 }
