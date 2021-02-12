@@ -16,6 +16,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -25,6 +26,7 @@ public
 class DB
 {
   public static final String sFIELDS = "#f";
+  public static final String DBMS    = "sql";
   
   public static
   int readInt(Connection conn, String sSQL, Object... parameters)
@@ -803,6 +805,146 @@ class DB
     return sb.toString().substring(1);
   }
   
+  public static
+  String buildWhere(Map<String,Object> mapFilter)
+  {
+    if(mapFilter == null || mapFilter.isEmpty()) return null;
+    
+    StringBuilder sbResult = new StringBuilder();
+    Iterator<Map.Entry<String,Object>> iterator = mapFilter.entrySet().iterator();
+    while(iterator.hasNext()) {
+      Map.Entry<String,Object> entry = iterator.next();
+      Object oKey = entry.getKey();
+      String sKey = oKey.toString();
+      Object valueTmp = entry.getValue();
+      if(valueTmp == null) continue;
+      
+      boolean boStartsWithPerc = false;
+      boolean boEndsWithPerc   = false;
+      boStartsWithPerc = sKey.startsWith("x__");
+      if(boStartsWithPerc) sKey = sKey.substring(3);
+      boEndsWithPerc = sKey.endsWith("__x");
+      if(boEndsWithPerc) sKey = sKey.substring(0, sKey.length() - 3);
+      
+      boolean boGTE  = sKey.endsWith("__gte");
+      boolean boLTE  = sKey.endsWith("__lte");
+      boolean boNE   = sKey.endsWith("__neq");
+      if(!boNE) boNE = sKey.endsWith("__not");
+      if(boGTE || boLTE || boNE) sKey = sKey.substring(0, sKey.length() - 5);
+      
+      boolean boGT  = sKey.endsWith("__gt");
+      boolean boLT  = sKey.endsWith("__lt");
+      if(boGT || boLT) sKey = sKey.substring(0, sKey.length() - 4);
+      
+      boolean boLike = false;
+      String value   = null;
+      if(valueTmp instanceof String) {
+        String s = ((String) valueTmp).trim();
+        
+        if(s.length() == 0) continue;
+        if(s.equals(QueryBuilder.NULL)) {
+          value = "NULL";
+        }
+        else {
+          value = "'";
+          if(boStartsWithPerc) value += "%";
+          value += s.replace("'", "''");
+          if(boEndsWithPerc) value += "%";
+          value += "'";
+        }
+        boLike = value.indexOf('%') >= 0 || value.indexOf('*') >= 0;
+        
+        // Is a date?
+        char c0 = s.charAt(0);
+        char cL = s.charAt(s.length()-1);
+        if(!boLike && Character.isDigit(c0) && Character.isDigit(cL) && s.length() > 7 && s.length() < 11) {
+          int iSep1 = s.indexOf('/');
+          if(iSep1 < 0) {
+            iSep1 = s.indexOf('-');
+            // YYYY-MM-DD
+            if(iSep1 != 4) iSep1 = -1;
+          }
+          if(iSep1 > 0) {
+            int iSep2 = s.indexOf('/', iSep1 + 1);
+            if(iSep2 < 0) {
+              iSep2 = s.indexOf('-', iSep1 + 1);
+              // YYYY-MM-DD
+              if(iSep2 != 7) iSep1 = -1;
+            }
+            if(iSep2 > 0) {
+              Calendar cal = toCalendar(s);
+              if(cal != null) {
+                if(boLTE) cal.add(Calendar.DATE, 1);
+                value = QueryBuilder.toString(cal, DBMS);
+              }
+            }
+          }
+        }
+      }
+      else if(valueTmp instanceof Calendar) {
+        Calendar cal = (Calendar) valueTmp;
+        if(boLTE) cal.add(Calendar.DATE, 1);
+        value = QueryBuilder.toString(cal, DBMS);
+      }
+      else if(valueTmp instanceof Date) {
+        if(boLTE) {
+          Calendar cal = Calendar.getInstance();
+          cal.setTimeInMillis(((Date) valueTmp).getTime());
+          cal.add(Calendar.DATE, 1);
+          value = QueryBuilder.toString(cal, DBMS);
+        }
+        else {
+          value = QueryBuilder.toString((Date) valueTmp, DBMS);
+        }
+      }
+      else if(valueTmp instanceof Boolean) {
+        Object booleanValue = QueryBuilder.getBooleanValue(valueTmp);
+        if(booleanValue == null) {
+          value = "NULL";
+        }
+        else if(booleanValue instanceof Number) {
+          value = booleanValue.toString();
+        }
+        else {
+          value = "'" + booleanValue + "'";
+        }
+      }
+      else {
+        value = valueTmp.toString();
+      }
+      
+      sbResult.append(sKey);
+      if(boNE) {
+        sbResult.append(" <> ");
+      }
+      else if(boGT) {
+        sbResult.append(" > ");
+      }
+      else if(boGTE) {
+        sbResult.append(" >= ");
+      }
+      else if(boLT) {
+        sbResult.append(" < ");
+      }
+      else if(boLTE) {
+        sbResult.append(" <= ");
+      }
+      else if(boLike) {
+        sbResult.append(" LIKE ");
+      }
+      else {
+        sbResult.append('=');
+      }
+      sbResult.append(value);
+      sbResult.append(" AND ");
+    }
+    String sResult = sbResult.toString();
+    if(sResult.length() > 0) {
+      sResult = sResult.substring(0, sResult.length()-5);
+    }
+    return sResult;
+  }
+  
   @SuppressWarnings("unchecked")
   public static
   String buildInSet(List<Object> items, String sSymbolic)
@@ -983,5 +1125,27 @@ class DB
         pstm.setObject(i + start + 1, parameter);
       }
     }
+  }
+  
+  public static
+  Calendar toCalendar(String s)
+  {
+    if(s == null || s.length() == 0) return null;
+    
+    int sep1 = s.indexOf('-');
+    if(sep1 < 0) return null;
+    int sep2 = s.indexOf('-', sep1+1);
+    if(sep2 < 0) return null;
+    
+    int YYYY = 0;
+    int MM = 0;
+    int DD = 0;
+    try { YYYY = Integer.parseInt(s.substring(0, sep1).trim());      } catch(Exception ex) {}
+    try { MM   = Integer.parseInt(s.substring(sep1+1, sep2).trim()); } catch(Exception ex) {}
+    try { DD   = Integer.parseInt(s.substring(sep2+1).trim());       } catch(Exception ex) {}
+    if(YYYY == 0 || MM == 0 || DD == 0) {
+      return null;
+    }
+    return new GregorianCalendar(YYYY, MM-1, DD);
   }
 }

@@ -10,6 +10,48 @@ A set of tools to manage relational SQL databases.
 - `java org.dew.dbsql.ExportSchema data_source`
 - `java org.dew.dbsql.ViewSchema data_source`
 
+## Utilities available
+
+**DB** helper class:
+
+```java
+Connection conn = null;
+try {
+  Context ctx = new InitialContext();
+  DataSource ds = (DataSource) ctx.lookup("java:/jdbc/db_test");
+  conn = ds.getConnection();
+  
+  int count = DB.readInt(conn, "SELECT COUNT(*) FROM CONTACTS WHERE NAME=? AND AGE>?", "CLARK", 40);
+  
+  List<String> names = DB.readListOfString(conn, "SELECT NAME FROM CONTACTS WHERE AGE>? ORDER BY NAME", 40);
+}
+catch(Exception ex) {
+  ex.printStackTrace();
+}
+finally {
+  if(conn != null) try { conn.close(); } catch (Exception e) {}
+}
+
+```
+**QueryBuilder** helper class:
+
+```java
+
+Map<String, Object> mapFilter = new HashMap<String, Object>();
+mapFilter.put("d", "ADMIN%");
+  
+QueryBuilder qb = new QueryBuilder();
+qb.put("ID_ROLE",     "i");
+qb.put("DESCRIPTION", "d");
+qb.put("ENABLED",     "e");
+  
+String sAddClause = "ENABLED=" + qb.decodeBoolean(true);
+  
+String sSQL = qb.select("ADM_ROLES", mapFilter, sAddClause);
+  
+sSQL += " ORDER BY ID_ROLE";
+```
+
 ## Data sources configuration (jdbc.cfg in CLASSPATH)
 
 ```
