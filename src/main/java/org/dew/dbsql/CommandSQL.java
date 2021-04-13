@@ -111,6 +111,7 @@ class CommandSQL
     System.out.println("view <t>   = view 20 records of table t");
     System.out.println("exp  <t>   = export table t");
     System.out.println("exp  <q>   = export query result");
+    System.out.println("xpl  <q>   = explain plan for query");
     System.out.println("blob <q>   = export blob field");
     System.out.println("auto <b>   = set auto commit");
   }
@@ -300,6 +301,39 @@ class CommandSQL
           catch(Exception ex) {
             System.out.println(ex.getMessage());
             ps.println(ex.getMessage());
+          }
+        }
+        else if(cmd.startsWith("xpl ") || cmd.startsWith("XPL ") || cmd.startsWith("Xpl ")) {
+          cmd = cmd.substring(4);
+          boolean boSelect = cmd.startsWith("SELECT ") || cmd.startsWith("select ") || cmd.startsWith("Select ");
+          if(!boSelect) {
+            cmd = "SELECT * FROM " + cmd;
+          }
+          String xplc = "explain plan for " + cmd;
+          String xpls = "select plan_table_output from table(dbms_xplan.display())";
+          boolean explainExecuted = false;
+          try {
+            System.out.println(xplc);
+            ps.println(xplc);
+            stm.executeUpdate(xplc);
+            explainExecuted = true;
+          }
+          catch(Exception ex) {
+            System.out.println(ex.getMessage());
+            ps.println(ex.getMessage());
+          }
+          if(explainExecuted) {
+            try {
+              System.out.println(xpls);
+              ps.println(xpls);
+              rs = stm.executeQuery(xpls);
+              printResultSet(rs, 20000);
+              rs.close();
+            }
+            catch(Exception ex) {
+              System.out.println(ex.getMessage());
+              ps.println(ex.getMessage());
+            }
           }
         }
         else if(cmd.startsWith("view ") || cmd.startsWith("VIEW ") || cmd.startsWith("View ")) {
