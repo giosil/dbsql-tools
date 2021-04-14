@@ -26,10 +26,12 @@ class CommandSQL
   protected PrintStream ps;
   protected List<String> listCommands = new ArrayList<String>();
   
-  protected final static int ORACLE   = 0;
-  protected final static int MYSQL    = 1;
-  protected final static int POSTGRES = 2;
-  protected final static int HSQLDB   = 3;
+  protected final static int ORACLE    = 0;
+  protected final static int MYSQL     = 1;
+  protected final static int POSTGRES  = 2;
+  protected final static int HSQLDB    = 3;
+  protected final static int SQLSERVER = 4;
+  protected final static int DB2       = 5;
   protected int iDatabase = ORACLE;
   
   protected String sDefSchema;
@@ -57,6 +59,12 @@ class CommandSQL
         }
         else if(sDBProductName.startsWith("h")) {
           this.iDatabase = HSQLDB;
+        }
+        else if(sDBProductName.startsWith("s")) {
+          this.iDatabase = SQLSERVER;
+        }
+        else if(sDBProductName.startsWith("d")) {
+          this.iDatabase = DB2;
         }
       }
     }
@@ -309,24 +317,40 @@ class CommandSQL
           if(!boSelect) {
             cmd = "SELECT * FROM " + cmd;
           }
-          String xplc = "explain plan for " + cmd;
-          String xpls = "select plan_table_output from table(dbms_xplan.display())";
-          boolean explainExecuted = false;
-          try {
-            System.out.println(xplc);
-            ps.println(xplc);
-            stm.executeUpdate(xplc);
-            explainExecuted = true;
-          }
-          catch(Exception ex) {
-            System.out.println(ex.getMessage());
-            ps.println(ex.getMessage());
-          }
-          if(explainExecuted) {
+          if(this.iDatabase == ORACLE) {
+            String xplc = "explain plan for " + cmd;
+            String xpls = "select plan_table_output from table(dbms_xplan.display())";
+            boolean explainExecuted = false;
             try {
-              System.out.println(xpls);
-              ps.println(xpls);
-              rs = stm.executeQuery(xpls);
+              System.out.println(xplc);
+              ps.println(xplc);
+              stm.executeUpdate(xplc);
+              explainExecuted = true;
+            }
+            catch(Exception ex) {
+              System.out.println(ex.getMessage());
+              ps.println(ex.getMessage());
+            }
+            if(explainExecuted) {
+              try {
+                System.out.println(xpls);
+                ps.println(xpls);
+                rs = stm.executeQuery(xpls);
+                printResultSet(rs, 20000);
+                rs.close();
+              }
+              catch(Exception ex) {
+                System.out.println(ex.getMessage());
+                ps.println(ex.getMessage());
+              }
+            }
+          }
+          else {
+            String xplc = "explain " + cmd;
+            try {
+              System.out.println(xplc);
+              ps.println(xplc);
+              rs = stm.executeQuery(xplc);
               printResultSet(rs, 20000);
               rs.close();
             }
