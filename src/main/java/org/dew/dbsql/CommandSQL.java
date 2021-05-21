@@ -110,8 +110,8 @@ class CommandSQL
     System.out.println("l [idx]    = last command [by index]");
     System.out.println("exit       = exit from command sql");
     System.out.println("bye        = exit from command sql");
-    System.out.println("tables [s] = list tables");
-    System.out.println("views  [s] = list views");
+    System.out.println("tables [s] = list tables [by schema]");
+    System.out.println("views  [s] = list views  [by schema]");
     System.out.println("cat        = list catalogs");
     System.out.println("schemas    = list schemas");
     System.out.println("ver        = print product version");
