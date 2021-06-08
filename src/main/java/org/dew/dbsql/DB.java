@@ -1051,8 +1051,12 @@ class DB
   boolean setBLOBContent(Connection conn, String sField, String sTable, String sWhere, byte[] abBlobContent)
     throws Exception
   {
+    // setEmptyBLOB deve essere sempre chiamato
+    // altrimenti si rischia di sovrascrivere una parte dei byte
+    // lasciando la restante invariata.
+    boolean setEmptyRes = setEmptyBLOB(conn, sField, sTable, sWhere);
     if(abBlobContent == null || abBlobContent.length == 0) {
-      return setEmptyBLOB(conn, sField, sTable, sWhere);
+      return setEmptyRes;
     }
     String sSQL = "SELECT " + sField + " FROM " + sTable;
     if(sWhere != null && sWhere.length() > 0) sSQL += " WHERE " + sWhere;
