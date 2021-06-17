@@ -34,6 +34,8 @@ class CommandSQL
   protected final static int DB2       = 5;
   protected int iDatabase = ORACLE;
   
+  protected final static int MAX_ROWS  = 50000;
+  
   protected String sDefSchema;
   
   public
@@ -336,7 +338,7 @@ class CommandSQL
                 System.out.println(xpls);
                 ps.println(xpls);
                 rs = stm.executeQuery(xpls);
-                printResultSet(rs, 20000);
+                printResultSet(rs, MAX_ROWS);
                 rs.close();
               }
               catch(Exception ex) {
@@ -351,7 +353,7 @@ class CommandSQL
               System.out.println(xplc);
               ps.println(xplc);
               rs = stm.executeQuery(xplc);
-              printResultSet(rs, 20000);
+              printResultSet(rs, MAX_ROWS);
               rs.close();
             }
             catch(Exception ex) {
@@ -429,7 +431,7 @@ class CommandSQL
         else if(cmd.startsWith("select ") || cmd.startsWith("SELECT ") || cmd.startsWith("Select ")) {
           try {
             rs = stm.executeQuery(cmd);
-            int iRows = printResultSet(rs, 20000);
+            int iRows = printResultSet(rs, MAX_ROWS);
             rs.close();
             System.out.println(iRows + " rows returned.");
             ps.println(iRows + " rows returned.");
@@ -702,7 +704,7 @@ class CommandSQL
         System.out.println(sInsert);
         ps.println(sInsert);
         iRows++;
-        if(iRows >= 20000) break;
+        if(iRows >= MAX_ROWS) break;
       }
     }
     catch(Exception ex) {
