@@ -1,8 +1,14 @@
 package org.dew.dbsql;
 
-import java.util.*;
-import java.io.*;
+import java.io.InputStream;
+
 import java.net.URL;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Properties;
 
 public
 class CommandAliases
@@ -34,6 +40,7 @@ class CommandAliases
     throws Exception
   {
     if(aliases == null || alias == null) return null;
+    
     String result = aliases.getProperty(alias.trim());
     if(result == null) {
       if(alias.startsWith("$") && alias.length() > 0) {

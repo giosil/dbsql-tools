@@ -966,7 +966,8 @@ class DB
         }
         if(oValue instanceof String) {
           sb.append(",'" + oValue.toString().replace("'", "''") + "'");
-        } else {
+        }
+        else {
           sb.append("," + oValue);
         }
       }
