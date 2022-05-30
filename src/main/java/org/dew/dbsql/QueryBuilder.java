@@ -20,8 +20,8 @@ class QueryBuilder
   // static options
   protected static boolean TO_UPPER    = false;
   protected static String  DBMS        = "sql";
-  protected static Object  TRUE_VALUE  = new Integer(1);
-  protected static Object  FALSE_VALUE = new Integer(0);
+  protected static Object  TRUE_VALUE  = 1;
+  protected static Object  FALSE_VALUE = 0;
   
   // instance options
   protected boolean toUpper    = TO_UPPER;
@@ -101,14 +101,14 @@ class QueryBuilder
   void setTrueValueRef(Object trueValue)
   {
     TRUE_VALUE = trueValue;
-    if(TRUE_VALUE == null) TRUE_VALUE = new Integer(1);
+    if(TRUE_VALUE == null) TRUE_VALUE = 1;
   }
   
   public static
   void setFalseValueRef(Object falseValue)
   {
     FALSE_VALUE = falseValue;
-    if(FALSE_VALUE == null) FALSE_VALUE = new Integer(0);
+    if(FALSE_VALUE == null) FALSE_VALUE = 0;
   }
   
   public
@@ -431,7 +431,16 @@ class QueryBuilder
           value = vtemp.toString();
         }
         
-        sbWhere.append(sField);
+        String sFieldName = null;
+        int iSepFieldAlias = sField.indexOf(' ');
+        if(iSepFieldAlias > 0) {
+          sFieldName = sField.substring(0, iSepFieldAlias);
+        }
+        else {
+          sFieldName = sField;
+        }
+        
+        sbWhere.append(sFieldName);
         if(boLike) {
           sbWhere.append(" LIKE ");
         }
@@ -462,45 +471,45 @@ class QueryBuilder
   }
   
   public
-  void put(String key, Object value)
+  void add(String field)
+  {
+    if(!listFields.contains(field)) {
+      listFields.add(field);
+    }
+  }
+  
+  public
+  void put(String field, Object value)
   {
     if(value == null) {
-      mapValues.put(key, NULL);
+      mapValues.put(field, NULL);
     }
     else {
-      mapValues.put(key, value);
+      mapValues.put(field, value);
     }
     
-    if(!listFields.contains(key)) {
-      listFields.add(key);
+    if(!listFields.contains(field)) {
+      listFields.add(field);
     }
   }
   
   public
-  void add(String sField)
-  {
-    if(!listFields.contains(sField)) {
-      listFields.add(sField);
-    }
-  }
-  
-  public
-  void put(String key, Object value, Object defaultValue)
+  void put(String field, Object value, Object defaultValue)
   {
     if(value == null) {
       if(defaultValue == null) {
-        mapValues.put(key, NULL);
+        mapValues.put(field, NULL);
       }
       else {
-        mapValues.put(key, defaultValue);
+        mapValues.put(field, defaultValue);
       }
     }
     else {
-      mapValues.put(key, value);
+      mapValues.put(field, value);
     }
     
-    if(!listFields.contains(key)) {
-      listFields.add(key);
+    if(!listFields.contains(field)) {
+      listFields.add(field);
     }
   }
   

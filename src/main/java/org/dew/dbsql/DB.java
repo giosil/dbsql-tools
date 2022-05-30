@@ -394,10 +394,10 @@ class DB
             String sValue = rs.getString(i);
             if(sValue != null) {
               if(sValue.indexOf('.') >= 0 || sValue.indexOf(',') >= 0) {
-                mapResult.put(sField, new Double(rs.getDouble(i)));
+                mapResult.put(sField, rs.getDouble(i));
               }
               else {
-                mapResult.put(sField, new Integer(rs.getInt(i)));
+                mapResult.put(sField, rs.getInt(i));
               }
             }
             else {
@@ -450,10 +450,10 @@ class DB
             String sValue = rs.getString(i);
             if(sValue != null) {
               if(sValue.indexOf('.') >= 0 || sValue.indexOf(',') >= 0) {
-                mapResult.put(sField, new Double(rs.getDouble(i)));
+                mapResult.put(sField, rs.getDouble(i));
               }
               else {
-                mapResult.put(sField, new Integer(rs.getInt(i)));
+                mapResult.put(sField, rs.getInt(i));
               }
             }
             else {
@@ -503,10 +503,10 @@ class DB
             String sValue = rs.getString(i);
             if(sValue != null) {
               if(sValue.indexOf('.') >= 0 || sValue.indexOf(',') >= 0) {
-                listRecord.add(new Double(rs.getDouble(i)));
+                listRecord.add(rs.getDouble(i));
               }
               else {
-                listRecord.add(new Integer(rs.getInt(i)));
+                listRecord.add(rs.getInt(i));
               }
             }
             else {
