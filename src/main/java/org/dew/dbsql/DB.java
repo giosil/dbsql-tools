@@ -826,11 +826,13 @@ class DB
       boEndsWithPerc = sKey.endsWith("__x");
       if(boEndsWithPerc) sKey = sKey.substring(0, sKey.length() - 3);
       
+      boolean boBAE  = sKey.endsWith("__bae"); // Begins AND Ends
+      boolean boBOE  = sKey.endsWith("__boe"); // Begins OR  Ends
       boolean boGTE  = sKey.endsWith("__gte");
       boolean boLTE  = sKey.endsWith("__lte");
       boolean boNE   = sKey.endsWith("__neq");
       if(!boNE) boNE = sKey.endsWith("__not");
-      if(boGTE || boLTE || boNE) sKey = sKey.substring(0, sKey.length() - 5);
+      if(boBAE || boBOE || boGTE || boLTE || boNE) sKey = sKey.substring(0, sKey.length() - 5);
       
       boolean boGT  = sKey.endsWith("__gt");
       boolean boLT  = sKey.endsWith("__lt");
@@ -913,7 +915,25 @@ class DB
         value = valueTmp.toString();
       }
       
-      sbResult.append(sKey);
+      if((boBAE || boBOE) && value.length() > 2) {
+        sbResult.append("(");
+        sbResult.append(sKey.toUpperCase());
+        sbResult.append(" LIKE ");
+        sbResult.append(value.substring(0, value.length()-1) + "%'");
+        if(boBOE) {
+          sbResult.append(" OR ");
+        }
+        else {
+          sbResult.append(" AND ");
+        }
+        sbResult.append(sKey.toUpperCase());
+        sbResult.append(" LIKE ");
+        sbResult.append("'%" + value.substring(1));
+        sbResult.append(") AND ");
+        continue;
+      }
+      
+      sbResult.append(sKey.toUpperCase());
       if(boNE) {
         sbResult.append(" <> ");
       }
@@ -940,6 +960,7 @@ class DB
     }
     String sResult = sbResult.toString();
     if(sResult.length() > 0) {
+      // Remove last " AND " (5 length)
       sResult = sResult.substring(0, sResult.length()-5);
     }
     return sResult;
