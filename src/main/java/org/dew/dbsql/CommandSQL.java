@@ -536,7 +536,7 @@ class CommandSQL
   protected 
   String waitForInput()
   {
-    byte[] result = new byte[1024];
+    byte[] result = new byte[2048];
     int length = 0;
     try {
       System.out.print("# ");
