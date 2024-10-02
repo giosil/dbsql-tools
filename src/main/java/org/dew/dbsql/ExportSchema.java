@@ -269,6 +269,9 @@ class ExportSchema
           else if(iFieldType == java.sql.Types.CLOB) {
             sb.append("\t" + sFieldName + " TEXT" + sDefault + sNullable + ",\n");
           }
+          else if(iFieldType == java.sql.Types.LONGVARCHAR) {
+            sb.append("\t" + sFieldName + " TEXT" + sDefault + sNullable + ",\n");
+          }
           else if(iSize <= 20) {
             if(iDigits > 0) {
               sb.append("\t" + sFieldName + " DECIMAL(" + iSize + "," + iDigits + ")" + sDefault + sNullable + ",\n");
@@ -310,6 +313,9 @@ class ExportSchema
           else if(iFieldType == java.sql.Types.CLOB) {
             sb.append("\t" + sFieldName + " TEXT" + sDefault + sNullable + ",\n");
           }
+          else if(iFieldType == java.sql.Types.LONGVARCHAR) {
+            sb.append("\t" + sFieldName + " TEXT" + sDefault + sNullable + ",\n");
+          }
           else if(iSize <= 20) {
             if(iDigits > 0) {
               sb.append("\t" + sFieldName + " NUMERIC(" + iSize + "," + iDigits + ")" + sDefault + sNullable + ",\n");
@@ -349,6 +355,9 @@ class ExportSchema
             sb.append("\t" + sFieldName + " BLOB" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.CLOB) {
+            sb.append("\t" + sFieldName + " VARCHAR(16777216)" + sDefault + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.LONGVARCHAR) {
             sb.append("\t" + sFieldName + " VARCHAR(16777216)" + sDefault + sNullable + ",\n");
           }
           else if(iSize <= 20) {
@@ -393,6 +402,9 @@ class ExportSchema
             sb.append("\t" + sFieldName + " BLOB" + sDefault + sNullable + ",\n");
           }
           else if(iFieldType == java.sql.Types.CLOB) {
+            sb.append("\t" + sFieldName + " CBLOB" + sDefault + sNullable + ",\n");
+          }
+          else if(iFieldType == java.sql.Types.LONGVARCHAR) {
             sb.append("\t" + sFieldName + " CBLOB" + sDefault + sNullable + ",\n");
           }
           else if(iSize <= 20) {

@@ -309,16 +309,19 @@ class ExportData
                 sbValues.append("NULL");
               }
               else {
-                String sMonth = iMonth < 10 ? "0" + iMonth : String.valueOf(iMonth);
-                String sDay   = iDay   < 10 ? "0" + iDay   : String.valueOf(iDay);
+                String sMonth  = iMonth < 10 ? "0" + iMonth : String.valueOf(iMonth);
+                String sDay    = iDay   < 10 ? "0" + iDay   : String.valueOf(iDay);
+                
+                String sHour   = iHour   < 10 ? "0" + iHour   : String.valueOf(iHour);
+                String sMinute = iMinute < 10 ? "0" + iMinute : String.valueOf(iMinute);
+                String sSecond = iSecond < 10 ? "0" + iSecond : String.valueOf(iSecond);
                 
                 switch (iDestination) {
                 case ORACLE:
-                  sbValues.append("TO_TIMESTAMP('" + iYear + "-" + sMonth + "-" + sDay + " " + iHour + ":" + iMinute + ":" + iSecond + "','YYYY-MM-DD HH24:MI:SS')");
+                  sbValues.append("TO_TIMESTAMP('" + iYear + "-" + sMonth + "-" + sDay + " " + sHour + ":" + sMinute + ":" + sSecond + "','YYYY-MM-DD HH24:MI:SS')");
                   break;
-                
                 default:
-                  sbValues.append("'" + iYear + "-" + sMonth + "-" + sDay + " " + iHour + ":" + iMinute + ":" + iSecond + "'");
+                  sbValues.append("'" + iYear + "-" + sMonth + "-" + sDay + " " + sHour + ":" + sMinute + ":" + sSecond + "'");
                   break;
                 }
               }

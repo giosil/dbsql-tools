@@ -944,6 +944,20 @@ class CommandSQL
           if(iDatabase == ORACLE) {
             sb.append("\t" + sFieldName + " CBLOB" + sDefault + sNullable + ",\n");
           }
+          else if(iDatabase == HSQLDB) {
+            sb.append("\t" + sFieldName + " VARCHAR(16777216)" + sDefault + sNullable + ",\n");
+          }
+          else {
+            sb.append("\t" + sFieldName + " TEXT" + sDefault + sNullable + ",\n");
+          }
+        }
+        else if(iFieldType == java.sql.Types.LONGVARCHAR) {
+          if(iDatabase == ORACLE) {
+            sb.append("\t" + sFieldName + " CBLOB" + sDefault + sNullable + ",\n");
+          }
+          else if(iDatabase == HSQLDB) {
+            sb.append("\t" + sFieldName + " VARCHAR(16777216)" + sDefault + sNullable + ",\n");
+          }
           else {
             sb.append("\t" + sFieldName + " TEXT" + sDefault + sNullable + ",\n");
           }
