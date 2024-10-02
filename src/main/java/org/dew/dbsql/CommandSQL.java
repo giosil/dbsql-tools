@@ -92,7 +92,7 @@ class CommandSQL
         System.exit(1);
       }
       
-      CommandSQL tool = new CommandSQL(conn, JdbcDataSource.getUser(args[0]));
+      CommandSQL tool = new CommandSQL(conn, JdbcDataSource.getSchema(args[0]));
       tool.start();
     }
     catch (Exception ex) {
@@ -892,6 +892,9 @@ class CommandSQL
               iFieldType == java.sql.Types.DATE || iFieldType == java.sql.Types.TIME || iFieldType == java.sql.Types.TIMESTAMP) {
             if(sDefValue.startsWith("'") && sDefValue.endsWith("'") && sDefValue.length() > 1) {
               sDefault = " DEFAULT " + sDefValue;
+            }
+            else if(sDefValue.equalsIgnoreCase("NULL")) {
+              sDefault = " DEFAULT NULL";
             }
             else {
               sDefault = " DEFAULT '" + sDefValue.replace("'", "''") + "'";

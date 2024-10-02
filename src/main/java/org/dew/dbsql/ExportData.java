@@ -110,7 +110,7 @@ class ExportData
       
       String sDestination = args.length > 1 ? args[1] : "oracle";
       
-      ExportData tool = new ExportData(conn, JdbcDataSource.getUser(args[0]), sDestination);
+      ExportData tool = new ExportData(conn, JdbcDataSource.getSchema(args[0]), sDestination);
       tool.export();
       
       System.out.println("Scripts generated in " + System.getProperty("user.home"));
@@ -182,8 +182,9 @@ class ExportData
     DatabaseMetaData dbmd = conn.getMetaData();
     
     ResultSet rs = null;
-    String sDBProductName = dbmd.getDatabaseProductName();
-    if(sDBProductName != null && sDBProductName.trim().toLowerCase().startsWith("o")) {
+    String sDBProductName   = dbmd.getDatabaseProductName();
+    String sDBProductNameLC = sDBProductName != null ? sDBProductName.trim().toLowerCase() : "";
+    if(sDBProductNameLC.startsWith("o") || sDBProductNameLC.startsWith("m")) {
       rs = dbmd.getTables(sDefSchema, sDefSchema, null, types);
     }
     else {

@@ -45,7 +45,7 @@ class ViewSchema
     try {
       conn = JdbcDataSource.getConnection(args[0]);
       
-      ViewSchema tool = new ViewSchema(conn, JdbcDataSource.getUser(args[0]), iDefMaxRows);
+      ViewSchema tool = new ViewSchema(conn, JdbcDataSource.getSchema(args[0]), iDefMaxRows);
       tool.view();
     }
     catch (Exception ex) {
@@ -78,8 +78,9 @@ class ViewSchema
     DatabaseMetaData dbmd = conn.getMetaData();
     
     ResultSet rs = null;
-    String sDBProductName = dbmd.getDatabaseProductName();
-    if(sDBProductName != null && sDBProductName.trim().toLowerCase().startsWith("o")) {
+    String sDBProductName   = dbmd.getDatabaseProductName();
+    String sDBProductNameLC = sDBProductName != null ? sDBProductName.trim().toLowerCase() : "";
+    if(sDBProductNameLC.startsWith("o") || sDBProductNameLC.startsWith("m")) {
       rs = dbmd.getTables(sDefSchema, sDefSchema, null, types);
     }
     else {

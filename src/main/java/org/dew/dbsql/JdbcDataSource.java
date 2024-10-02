@@ -31,6 +31,26 @@ class JdbcDataSource
   }
   
   public static
+  String getSchema(String sName)
+    throws Exception
+  {
+    String url = config.getProperty(sName + ".url");
+    if(url == null || url.length() == 0) {
+      return config.getProperty(sName + ".user");
+    }
+    else if(url.indexOf("mariadb:") >= 0 || url.indexOf("mysql:") >= 0) {
+      int sep = url.lastIndexOf('/');
+      if(sep > 0 && sep < url.length() -1) {
+        return url.substring(sep + 1);
+      }
+      else {
+        return config.getProperty(sName + ".user");
+      }
+    }
+    return config.getProperty(sName + ".user");
+  }
+  
+  public static
   String getUser(String sName)
     throws Exception
   {

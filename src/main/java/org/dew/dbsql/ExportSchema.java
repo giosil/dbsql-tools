@@ -80,7 +80,7 @@ class ExportSchema
       
       String sDestination = args.length > 1 ? args[1] : "oracle";
       
-      ExportSchema tool = new ExportSchema(conn, JdbcDataSource.getUser(args[0]), sDestination);
+      ExportSchema tool = new ExportSchema(conn, JdbcDataSource.getSchema(args[0]), sDestination);
       tool.writeScripts();
       
       System.out.println("Scripts generated in " + System.getProperty("user.home") + ".");
@@ -164,8 +164,9 @@ class ExportSchema
     DatabaseMetaData dbmd = conn.getMetaData();
     
     ResultSet rs = null;
-    String sDBProductName = dbmd.getDatabaseProductName();
-    if(sDBProductName != null && sDBProductName.trim().toLowerCase().startsWith("o")) {
+    String sDBProductName   = dbmd.getDatabaseProductName();
+    String sDBProductNameLC = sDBProductName != null ? sDBProductName.trim().toLowerCase() : "";
+    if(sDBProductNameLC.startsWith("o") || sDBProductNameLC.startsWith("m")) {
       rs = dbmd.getTables(sDefSchema, sDefSchema, null, types);
     }
     else {
@@ -225,6 +226,9 @@ class ExportSchema
               iFieldType == java.sql.Types.DATE || iFieldType == java.sql.Types.TIME || iFieldType == java.sql.Types.TIMESTAMP) {
             if(sDefValue.startsWith("'") && sDefValue.endsWith("'") && sDefValue.length() > 1) {
               sDefault = " DEFAULT " + sDefValue;
+            }
+            else if(sDefValue.equalsIgnoreCase("NULL")) {
+              sDefault = " DEFAULT NULL";
             }
             else {
               sDefault = " DEFAULT '" + sDefValue.replace("'", "''") + "'";
