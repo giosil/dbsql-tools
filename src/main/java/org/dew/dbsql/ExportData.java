@@ -36,6 +36,8 @@ class ExportData
   
   protected List<String> tables;
   
+  protected int maxRows = 0;
+  
   public
   ExportData(Connection conn, String sSchema, String sDestination)
     throws Exception
@@ -92,11 +94,19 @@ class ExportData
     this.tables = tables;
   }
   
+  public int getMaxRows() {
+    return maxRows;
+  }
+
+  public void setMaxRows(int maxRows) {
+    this.maxRows = maxRows;
+  }
+  
   public static
   void main(String[] args)
   {
     if(args == null || args.length == 0) {
-      System.err.println("Usage: ExportData data_source [oracle|mysql|mariadb|postgres|hsqldb|h2]");
+      System.err.println("Usage: ExportData data_source [oracle|mysql|mariadb|postgres|hsqldb|h2] [maxRows]");
       System.exit(1);
     }
     Connection conn = null;
@@ -110,7 +120,16 @@ class ExportData
       
       String sDestination = args.length > 1 ? args[1] : "oracle";
       
+      int iMaxRows = 0;
+      String sMaxRows = args.length > 2 ? args[2] : "0";
+      try {
+        iMaxRows = Integer.parseInt(sMaxRows);
+      }
+      catch(Exception ex) {
+      }
+      
       ExportData tool = new ExportData(conn, JdbcDataSource.getSchema(args[0]), sDestination);
+      tool.setMaxRows(iMaxRows);
       tool.export();
       
       System.out.println("Scripts generated in " + System.getProperty("user.home"));
@@ -129,7 +148,6 @@ class ExportData
   {
     PrintStream psD = getPrintStream(sDefSchema + "_dat.sql");
     PrintStream psS = getPrintStream(sDefSchema + "_seq.sql");
-    int iDefMaxRows = 1000;
     
     if(iDestination == ORACLE) {
       psD.println("set define off;");
@@ -154,7 +172,7 @@ class ExportData
           continue;
         }
       }
-      export(sTable, null, iDefMaxRows, psD, psS);
+      export(sTable, null, maxRows, psD, psS);
     }
     
     if(iDestination == HSQLDB) {
