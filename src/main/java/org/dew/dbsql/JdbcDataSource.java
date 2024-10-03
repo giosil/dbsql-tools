@@ -1,9 +1,13 @@
 package org.dew.dbsql;
 
-import java.util.*;
-import java.io.*;
+import java.io.InputStream;
+
 import java.net.URL;
-import java.sql.*;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+
+import java.util.Properties;
 
 public
 class JdbcDataSource

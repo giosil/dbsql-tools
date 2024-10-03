@@ -66,7 +66,7 @@ class ConnectionManager
     } catch (Exception ex) {
       sExceptions += "[" + ex.getMessage() + "]";
     }
-    throw new Exception("DataSource " + sName + " not found. (" + sExceptions + ")");
+    throw new Exception("DataSource " + sName + " not available. (" + sExceptions + ")");
   }
   
   public static void closeConnection(Connection conn) {

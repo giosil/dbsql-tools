@@ -1,8 +1,10 @@
 package org.dew.dbsql;
 
 import java.lang.reflect.Array;
+
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
