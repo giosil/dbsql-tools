@@ -67,12 +67,23 @@ db_mysql.url      = jdbc:mysql://localhost:3306/test
 db_mysql.user     = test
 db_mysql.password = test
 
+# Mariadb Database
+db_mariadb.driver   = org.mariadb.jdbc.Driver
+db_mariadb.url      = jdbc:mariadb://localhost:3306/test
+db_mariadb.user     = test
+db_mariadb.password = test
+
+# Postgresql Database
+db_psql.driver   = org.postgresql.Driver
+db_psql.url      = jdbc:postgresql://localhost:5432/test
+db_psql.user     = test
+db_psql.password = test
+
 # HSQL Database
 db_hsqldb.driver   = org.hsqldb.jdbcDriver
 db_hsqldb.url      = jdbc:hsqldb:file:/C:/folder/database_name
 db_hsqldb.user     = SA
 db_hsqldb.password = 
-
 ```
 
 ## Build
