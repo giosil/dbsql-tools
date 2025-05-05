@@ -84,6 +84,12 @@ db_hsqldb.driver   = org.hsqldb.jdbcDriver
 db_hsqldb.url      = jdbc:hsqldb:file:/C:/folder/database_name
 db_hsqldb.user     = SA
 db_hsqldb.password = 
+
+# H2 Database
+db_h2db.driver   = org.h2.Driver
+db_h2db.url      = jdbc:h2:file:/C:/folder/database_name
+db_h2db.user     = sa
+db_h2db.password = 
 ```
 
 ## Build
