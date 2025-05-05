@@ -66,6 +66,13 @@ db_mysql.driver   = com.mysql.jdbc.Driver
 db_mysql.url      = jdbc:mysql://localhost:3306/test
 db_mysql.user     = test
 db_mysql.password = test
+
+# HSQL Database
+db_hsqldb.driver   = org.hsqldb.jdbcDriver
+db_hsqldb.url      = jdbc:hsqldb:file:/C:/folder/database_name
+db_hsqldb.user     = SA
+db_hsqldb.password = 
+
 ```
 
 ## Build
