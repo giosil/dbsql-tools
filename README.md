@@ -6,7 +6,8 @@ A set of tools to manage relational SQL databases.
 
 - `java org.dew.dbsql.CommandSQL data_source`
 - `java org.dew.dbsql.ExecuteSQL data_source sql_file`
-- `java org.dew.dbsql.ExportData data_source`
+- `java org.dew.dbsql.ExportData data_source [type_db_dest] [max_rows] [tables]`
+- `java org.dew.dbsql.MigrateData data_source_src data_source_dst [type_db_dest] [max_rows] [tables]`
 - `java org.dew.dbsql.ExportSchema data_source`
 - `java org.dew.dbsql.ViewSchema data_source`
 

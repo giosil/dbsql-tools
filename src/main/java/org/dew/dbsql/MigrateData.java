@@ -20,9 +20,10 @@ import java.util.Calendar;
 import java.util.List;
 
 public 
-class ExportData 
+class MigrateData 
 {
-  protected Connection conn;
+  protected Connection connSrc;
+  protected Connection connDst;
   
   protected String sDefSchema;
   
@@ -42,10 +43,11 @@ class ExportData
   protected static String TAB_SEQUENCES = "TAB_SEQUENCES";
   
   public
-  ExportData(Connection conn, String sSchema, String sDestination)
+  MigrateData(Connection connSrc, Connection connDst, String sSchema, String sDestination)
     throws Exception
   {
-    this.conn = conn;
+    this.connSrc = connSrc;
+    this.connDst = connDst;
     
     this.sDefSchema = sSchema;
     
@@ -72,10 +74,11 @@ class ExportData
   }
   
   public
-  ExportData(Connection conn, String sSchema, String sDestination, List<String> tables)
+  MigrateData(Connection connSrc, Connection connDst, String sSchema, String sDestination, List<String> tables)
     throws Exception
   {
-    this.conn = conn;
+    this.connSrc = connSrc;
+    this.connDst = connDst;
     
     this.sDefSchema = sSchema;
     
@@ -114,23 +117,31 @@ class ExportData
   public static
   void main(String[] args)
   {
-    if(args == null || args.length == 0) {
-      System.err.println("Usage: ExportData data_source [oracle|mysql|mariadb|postgres|hsqldb|h2][_lc] [maxRows] [tables]");
+    if(args == null || args.length < 2) {
+      System.err.println("Usage: ExportData data_source_src data_source_dst [oracle|mysql|mariadb|postgres|hsqldb|h2][_lc] [maxRows] [tables]");
       System.exit(1);
     }
-    Connection conn = null;
+    Connection connSrc = null;
+    Connection connDst = null;
     try {
-      conn = JdbcDataSource.getConnection(args[0]);
+      connSrc = JdbcDataSource.getConnection(args[0]);
       
-      if(conn == null) {
-        System.err.println("Data source " + args[0] + " not exists in configuration file.");
+      if(connSrc == null) {
+        System.err.println("Data source src " + args[0] + " not exists in configuration file.");
         System.exit(1);
       }
       
-      String sDestination = args.length > 1 ? args[1] : "oracle";
+      connDst = JdbcDataSource.getConnection(args[1]);
+      
+      if(connDst == null) {
+        System.err.println("Data source dest " + args[0] + " not exists in configuration file.");
+        System.exit(1);
+      }
+      
+      String sDestination = args.length > 2 ? args[2] : "oracle";
       
       int iMaxRows = 0;
-      String sMaxRows = args.length > 2 ? args[2] : "0";
+      String sMaxRows = args.length > 3 ? args[3] : "0";
       if(sMaxRows == null || sMaxRows.length() == 0) {
         sMaxRows = "0";
       }
@@ -140,9 +151,9 @@ class ExportData
       catch(Exception ex) {
       }
       
-      String tables = args.length > 3 ? args[3] : null;
+      String tables = args.length > 4 ? args[4] : null;
       
-      ExportData tool = new ExportData(conn, JdbcDataSource.getSchema(args[0]), sDestination, stringToListUC(tables));
+      MigrateData tool = new MigrateData(connSrc, connDst, JdbcDataSource.getSchema(args[0]), sDestination, stringToListUC(tables));
       tool.setMaxRows(iMaxRows);
       tool.export();
       
@@ -152,7 +163,8 @@ class ExportData
       ex.printStackTrace();
     }
     finally {
-      if(conn != null) try{ conn.close(); } catch(Exception ex) {}
+      if(connSrc != null) try{ connSrc.close(); } catch(Exception ex) {}
+      if(connDst != null) try{ connDst.close(); } catch(Exception ex) {}
     }
   }
   
@@ -221,7 +233,7 @@ class ExportData
     
     String[] types = new String[1];
     types[0] = "TABLE";
-    DatabaseMetaData dbmd = conn.getMetaData();
+    DatabaseMetaData dbmd = connSrc.getMetaData();
     
     ResultSet rs = null;
     String sDBProductName   = dbmd.getDatabaseProductName();
@@ -259,10 +271,13 @@ class ExportData
         sSQL += " WHERE " + sWhere;
       }
     }
+    Statement stmDst = null;
     
     Statement stm = null;
     ResultSet rs = null;
     try {
+      stmDst = connDst.createStatement();
+      
       String sPK = getPK(sTable);
       if(sPK != null && sPK.length() > 0) {
         sSQL += " ORDER BY " + sPK;
@@ -271,7 +286,7 @@ class ExportData
         sSQL += " ORDER BY 1";
       }
       
-      stm = conn.createStatement();
+      stm = connSrc.createStatement();
       rs  = stm.executeQuery(sSQL);
       
       int iRows = 0;
@@ -414,9 +429,20 @@ class ExportData
           if(i < columnCount) sbValues.append(',');
         }
         String sTableName = lowercase ? sTable.toLowerCase() : sTable;
-        String sInsert = "INSERT INTO " + sTableName + "(" + sHeader + ") VALUES(" + sbValues + ");";
-        psD.println(sInsert);
+        String sInsert = "INSERT INTO " + sTableName + "(" + sHeader + ") VALUES(" + sbValues + ")";
+        psD.println(sInsert + ";");
         iRows++;
+        
+        try {
+          stmDst.execute(sInsert);
+          connDst.commit();
+          if(iRows % 100 == 0) {
+            System.out.println("    " + iRows);
+          }
+        }
+        catch(Exception ex) {
+          System.err.println("[" + iRows + "] " + sInsert + ": " + ex);
+        }
         if(iMaxRows > 0 && iRows >= iMaxRows) break;
       }
       
@@ -443,6 +469,7 @@ class ExportData
     finally {
       if(rs  != null) try{ rs.close();  } catch(Exception ex) {}
       if(stm != null) try{ stm.close(); } catch(Exception ex) {}
+      if(stmDst != null) try{ stmDst.close(); } catch(Exception ex) {}
     }
   }
   
@@ -453,7 +480,7 @@ class ExportData
     String sResult = "";
     ResultSet rs = null;
     try {
-      DatabaseMetaData dbmd = conn.getMetaData();
+      DatabaseMetaData dbmd = connSrc.getMetaData();
       rs = dbmd.getPrimaryKeys(null, null, sTable);
       while (rs.next()) {
         sResult += "," + rs.getString(4);
@@ -520,3 +547,4 @@ class ExportData
     return arrayList;
   }
 }
+
