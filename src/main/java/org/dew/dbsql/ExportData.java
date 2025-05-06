@@ -115,7 +115,7 @@ class ExportData
   void main(String[] args)
   {
     if(args == null || args.length == 0) {
-      System.err.println("Usage: ExportData data_source [oracle|mysql|mariadb|postgres|hsqldb|h2] [maxRows]");
+      System.err.println("Usage: ExportData data_source [oracle|mysql|mariadb|postgres|hsqldb|h2][_lc] [maxRows] [tables]");
       System.exit(1);
     }
     Connection conn = null;
@@ -131,13 +131,18 @@ class ExportData
       
       int iMaxRows = 0;
       String sMaxRows = args.length > 2 ? args[2] : "0";
+      if(sMaxRows == null || sMaxRows.length() == 0) {
+        sMaxRows = "0";
+      }
       try {
         iMaxRows = Integer.parseInt(sMaxRows);
       }
       catch(Exception ex) {
       }
       
-      ExportData tool = new ExportData(conn, JdbcDataSource.getSchema(args[0]), sDestination);
+      String tables = args.length > 3 ? args[3] : null;
+      
+      ExportData tool = new ExportData(conn, JdbcDataSource.getSchema(args[0]), sDestination, stringToListUC(tables));
       tool.setMaxRows(iMaxRows);
       tool.export();
       
@@ -184,7 +189,10 @@ class ExportData
     for(int i = 0; i < listTables.size(); i++) {
       String sTable = (String) listTables.get(i);
       if(tables != null && tables.size() > 0) {
-        if(!tables.contains(sTable)) {
+        if(!tables.contains(sTable.toUpperCase())) {
+          continue;
+        }
+        if(tables.contains("-" + sTable.toUpperCase())) {
           continue;
         }
       }
@@ -490,5 +498,25 @@ class ExportData
     }
     baos.flush();
     return baos.toByteArray();
+  }
+  
+  protected static
+  List<String> stringToListUC(String sText)
+  {
+    if(sText == null || sText.length() == 0) return new ArrayList<String>(0);
+    if(sText.startsWith("[") && sText.endsWith("]")) {
+      sText = sText.substring(1, sText.length()-1);
+    }
+    ArrayList<String> arrayList = new ArrayList<String>();
+    int iIndexOf = 0;
+    int iBegin   = 0;
+    iIndexOf     = sText.indexOf(',');
+    while(iIndexOf >= 0) {
+      arrayList.add(sText.substring(iBegin, iIndexOf).trim().toUpperCase());
+      iBegin = iIndexOf + 1;
+      iIndexOf = sText.indexOf(',', iBegin);
+    }
+    arrayList.add(sText.substring(iBegin).trim().toUpperCase());
+    return arrayList;
   }
 }
