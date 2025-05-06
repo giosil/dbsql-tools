@@ -37,6 +37,9 @@ class ExportData
   protected List<String> tables;
   
   protected int maxRows = 0;
+  protected boolean lowercase = false;
+  
+  protected static String TAB_SEQUENCES = "TAB_SEQUENCES";
   
   public
   ExportData(Connection conn, String sSchema, String sDestination)
@@ -62,6 +65,9 @@ class ExportData
     }
     else if(this.sDestination.startsWith("h")) {
       this.iDestination = HSQLDB;
+    }
+    if(this.sDestination.endsWith("lc")) {
+      lowercase = true;
     }
   }
   
@@ -89,6 +95,9 @@ class ExportData
     }
     else if(this.sDestination.startsWith("h")) {
       this.iDestination = HSQLDB;
+    }
+    if(this.sDestination.endsWith("lc")) {
+      lowercase = true;
     }
     
     this.tables = tables;
@@ -154,14 +163,21 @@ class ExportData
       psD.println("");
     }
     
+    if(TAB_SEQUENCES == null || TAB_SEQUENCES.length() == 0) {
+      TAB_SEQUENCES = "TAB_SEQUENCES";
+    }
+    if(lowercase) {
+      TAB_SEQUENCES = TAB_SEQUENCES.toLowerCase();
+    }
+    
     if(iDestination == MYSQL) {
-      psS.println("CREATE TABLE TAB_SEQUENCES(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INT NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
+      psS.println("CREATE TABLE " + TAB_SEQUENCES + "(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INT NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
     }
     else if(iDestination == POSTGRES) {
-      psS.println("CREATE TABLE TAB_SEQUENCES(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INTEGER NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
+      psS.println("CREATE TABLE " + TAB_SEQUENCES + "(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INTEGER NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
     }
     else if(iDestination == HSQLDB) {
-      psS.println("CREATE TABLE TAB_SEQUENCES(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INT NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
+      psS.println("CREATE TABLE " + TAB_SEQUENCES + "(SEQ_NAME VARCHAR(50) NOT NULL,SEQ_VAL INT NOT NULL,CONSTRAINT PK_TAB_SEQUENCES PRIMARY KEY (SEQ_NAME));\n");
     }
     
     List<String> listTables = getTables();
@@ -389,7 +405,8 @@ class ExportData
           }
           if(i < columnCount) sbValues.append(',');
         }
-        String sInsert = "INSERT INTO " + sTable + "(" + sHeader + ") VALUES(" + sbValues + ");";
+        String sTableName = lowercase ? sTable.toLowerCase() : sTable;
+        String sInsert = "INSERT INTO " + sTableName + "(" + sHeader + ") VALUES(" + sbValues + ");";
         psD.println(sInsert);
         iRows++;
         if(iMaxRows > 0 && iRows >= iMaxRows) break;
@@ -410,7 +427,7 @@ class ExportData
       else {
         if(iMaxFirstValue > 0 && psS != null) {
           int iStartWith = iMaxFirstValue + 1;
-          psS.println("INSERT INTO TAB_SEQUENCES VALUES('SEQ_" + sTable + "', " + iStartWith + ");");
+          psS.println("INSERT INTO " + TAB_SEQUENCES + " VALUES('SEQ_" + sTable + "', " + iStartWith + ");");
           psS.println("COMMIT;");
         }
       }
