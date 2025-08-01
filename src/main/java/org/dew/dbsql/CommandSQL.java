@@ -626,7 +626,7 @@ class CommandSQL
               }
               else {
                 sbValues.append('\'');
-                sbValues.append(sValue.replace("'", "''"));
+                sbValues.append(sValue.replace("'", "''").replace("\\", "\\\\"));
                 sbValues.append('\'');
               }
               break;
@@ -897,7 +897,7 @@ class CommandSQL
               sDefault = " DEFAULT NULL";
             }
             else {
-              sDefault = " DEFAULT '" + sDefValue.replace("'", "''") + "'";
+              sDefault = " DEFAULT '" + sDefValue.replace("'", "''").replace("\\", "\\\\") + "'";
             }
           }
           else {

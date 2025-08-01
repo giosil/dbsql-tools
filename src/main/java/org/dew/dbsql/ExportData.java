@@ -301,7 +301,7 @@ class ExportData
             }
             else {
               sbValues.append('\'');
-              sbValues.append(sValue.replace("'", "''"));
+              sbValues.append(sValue.replace("'", "''").replace("\\", "\\\\"));
               sbValues.append('\'');
             }
             break;

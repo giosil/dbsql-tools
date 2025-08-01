@@ -242,7 +242,7 @@ class ExportSchema
               sDefault = " DEFAULT NULL";
             }
             else {
-              sDefault = " DEFAULT '" + sDefValue.replace("'", "''") + "'";
+              sDefault = " DEFAULT '" + sDefValue.replace("'", "''").replace("\\", "\\\\") + "'";
             }
           }
           else {
